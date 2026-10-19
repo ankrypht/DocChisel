@@ -21,12 +21,23 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#09090B"
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0B84FE",
+        "monochromeImage": "./assets/adaptive-monochrome.png"
       },
       "package": "com.ankushsarkar.docchisel"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#0B84FE",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

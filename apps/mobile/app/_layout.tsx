@@ -3,7 +3,11 @@ import { LogBox, Text, TextInput } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import * as SplashScreen from 'expo-splash-screen';
 import '../global.css';
+
+// Prevent splash screen from auto-hiding before UI is ready
+SplashScreen.preventAutoHideAsync();
 
 // NativeWind / react-native-css-interop registers ImageBackground support,
 // which triggers this React Native 0.88 warning.
@@ -25,6 +29,10 @@ if ((TextInput as any).defaultProps == null) {
 (TextInput as any).defaultProps.maxFontSizeMultiplier = 1;
 
 export default function RootLayout() {
+  React.useEffect(() => {
+    SplashScreen.hideAsync().catch(() => {});
+  }, []);
+
   return (
     <SafeAreaProvider>
       <StatusBar style="light" />
