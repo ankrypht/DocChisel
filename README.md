@@ -48,6 +48,9 @@ DocChisel/
 
 ## 🚀 Getting Started
 
+> [!TIP]
+> **Complete Build, Test & Packaging Guide**: See [INSTRUCTIONS.md](INSTRUCTIONS.md) for step-by-step setup, hot-reload dev servers, building Android APK & Google Play `.aab`, macOS DMG, Windows MSI/EXE, and exporting all release binaries to the unified `releases/` directory.
+
 ### Prerequisites
 
 - [Node.js](https://nodejs.org/) (v20+)

@@ -71,9 +71,10 @@ rm -rf "$REPO_ROOT/.expo" \
        "$REPO_ROOT/tsconfig.json" \
        "$REPO_ROOT/android"
 
-# 6. Deep mode: deduplicate packages and prune npm caches
+# 6. Deep mode: deduplicate packages and prune npm caches & releases
 if [ "$DEEP_MODE" = true ]; then
-    echo "==> Deep mode enabled: Deduplicating node_modules..."
+    echo "==> Deep mode enabled: Deduplicating node_modules and cleaning releases/..."
+    rm -rf "$REPO_ROOT/releases"
     npm dedupe 2>/dev/null || true
 fi
 
