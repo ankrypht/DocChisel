@@ -119,14 +119,30 @@ android {
             }
         }
     }
+    // Check if the current build invocation is generating an Android App Bundle (.aab).
+    // An App Bundle bundles all architectures into a single artifact for Google Play.
+    // AGP resource shrinking fails if APK ABI splitting is enabled during bundleRelease.
+    def isBuildingBundle = gradle.startParameter.taskNames.any { it.toLowerCase().contains("bundle") }
+    def enableAbiSplits = !isBuildingBundle && (findProperty('android.enableAbiSplits') ?: "true").toBoolean()
+
     splits {
         abi {
             reset()
-            enable true
-            universalApk true
+            enable enableAbiSplits
+            universalApk enableAbiSplits
             include "armeabi-v7a", "arm64-v8a", "x86", "x86_64"
         }
     }
+
+    // When building a bundle, ensure any stale split shrunk-resources from prior APK builds are removed
+    if (isBuildingBundle) {
+        tasks.matching { it.name == "preReleaseBuild" }.configureEach {
+            doFirst {
+                delete layout.buildDirectory.dir("intermediates/shrunk_resources_proto_format")
+            }
+        }
+    }
+
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
