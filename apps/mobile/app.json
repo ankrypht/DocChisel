@@ -1,0 +1,31 @@
+{
+  "expo": {
+    "name": "DocChisel",
+    "slug": "docchisel",
+    "version": "0.1.0",
+    "orientation": "default",
+    "icon": "./assets/icon.png",
+    "scheme": "docchisel",
+    "userInterfaceStyle": "dark",
+    "platforms": [
+      "android",
+      "ios"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.ankushsarkar.docchisel"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#09090B"
+      },
+      "package": "com.ankushsarkar.docchisel"
+    },
+    "plugins": [
+      "expo-router"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "name": "docchisel",
+  "version": "0.1.0",
+  "private": true,
+  "description": "100% local, offline, all-in-one PDF and Image toolkit",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "desktop:dev": "npm run --workspace=@docchisel/desktop tauri:dev",
+    "desktop:tauri": "npm run --workspace=@docchisel/desktop tauri --",
+    "desktop:build": "npm run --workspace=@docchisel/desktop build",
+    "desktop:package:mac": "npm run --workspace=@docchisel/desktop build:mac",
+    "desktop:package:mac-universal": "npm run --workspace=@docchisel/desktop build:mac-universal",
+    "desktop:package:windows": "npm run --workspace=@docchisel/desktop build:windows",
+    "desktop:package:no-bundle": "npm run --workspace=@docchisel/desktop tauri:build:no-bundle",
+    "mobile:start": "npm --workspace=@docchisel/mobile run start --",
+    "mobile:android": "npm --workspace=@docchisel/mobile run android --",
+    "mobile:android:release": "npm --workspace=@docchisel/mobile run android:release --",
+    "mobile:ios": "npm --workspace=@docchisel/mobile run ios --",
+    "mobile:ios:release": "npm --workspace=@docchisel/mobile run ios:release --",
+    "mobile:build:apk-debug": "npm run --workspace=@docchisel/mobile build:apk-debug",
+    "mobile:build:apk-release": "npm run --workspace=@docchisel/mobile build:apk-release",
+    "mobile:build:bundle": "npm run --workspace=@docchisel/mobile build:bundle",
+    "mobile:clean": "npm run --workspace=@docchisel/mobile clean:android",
+    "mobile:build-engine": "bash scripts/build-mobile-engine.sh",
+    "mobile:build-engine:release": "bash scripts/build-mobile-engine.sh --release",
+    "engine:build": "cargo build --package core_engine",
+    "engine:test": "cargo test --package core_engine",
+    "clean": "bash scripts/clean.sh",
+    "clean:deep": "bash scripts/clean.sh --deep",
+    "typecheck": "npm run --workspaces --if-present typecheck",
+    "test": "npm run engine:test",
+    "check:all": "npm run typecheck && npm run engine:test"
+  },
+  "keywords": [
+    "pdf",
+    "image",
+    "offline",
+    "local-first",
+    "privacy"
+  ],
+  "author": "Ankush Sarkar",
+  "license": "MIT"
+}

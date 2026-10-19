@@ -1,0 +1,7 @@
+{
+  "name": "docchisel-bridge",
+  "version": "0.1.0",
+  "description": "Local Expo module bridging Rust core_engine to React Native",
+  "main": "index.ts",
+  "types": "index.ts"
+}

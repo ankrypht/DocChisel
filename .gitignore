@@ -1,0 +1,115 @@
+# ==============================================================================
+# DocChisel - Git Ignore Rules
+# ==============================================================================
+
+# --- AI Agents & Automation Guidelines (Local only) ---
+AGENTS.md
+**/AGENTS.md
+.agents/
+skills-lock.json
+
+# --- Rust & Cargo ---
+target/
+**/target/
+**/*.rs.bk
+*.cargo-ok
+Cargo.lock
+
+# --- Node / Package Managers ---
+node_modules/
+**/node_modules/
+.npm/
+.pnpm-store/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# --- Build Outputs & Caches ---
+dist/
+**/dist/
+build/
+**/build/
+out/
+**/out/
+.next/
+*.tsbuildinfo
+**/*.tsbuildinfo
+.vite/
+**/.vite/
+.vite-temp/
+**/.vite-temp/
+.turbo/
+**/.turbo/
+
+# --- Tauri v2 Desktop ---
+apps/desktop/src-tauri/target/
+apps/desktop/src-tauri/WixTools/
+apps/desktop/src-tauri/gen/
+
+# --- Expo & React Native Mobile ---
+.expo/
+**/.expo/
+expo-env.d.ts
+*.jsbundle
+
+# --- Android ---
+.gradle/
+**/.gradle/
+.cxx/
+**/.cxx/
+.kotlin/
+**/.kotlin/
+local.properties
+**/local.properties
+*.iml
+**/*.iml
+*.hprof
+**/*.hprof
+apps/mobile/android/gradle/gradle-daemon-jvm.properties
+apps/mobile/android/app/src/main/java/inline/
+*.apk
+*.aab
+*.jks
+*.keystore
+!apps/mobile/android/app/debug.keystore
+
+# --- iOS & Xcode ---
+Pods/
+**/Pods/
+*.xcworkspace
+*.xcuserdata
+DerivedData/
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# --- Environment & Credentials ---
+.env
+.env.*
+!.env.example
+!.env.template
+*.pem
+*.key
+*.cert
+
+# --- Operating System & Editors ---
+.DS_Store
+**/.DS_Store
+Thumbs.db
+ehthumbs.db
+.idea/
+**/.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# --- Test & Temporary Artifacts ---
+*.tmp
+**/*.tmp
+temp_test/
+**/temp_test/
+coverage/
+**/.nyc_output/
