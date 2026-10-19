@@ -14,7 +14,7 @@
 - **🖥️ Cross-Platform Desktop App**: Built with Tauri v2 + React 19 + Tailwind CSS for macOS, Windows, and Linux.
 - **📱 Mobile App**: Built with Expo + React Native + NativeWind with a native UniFFI Rust bridge for iOS and Android.
 - **🎨 Sleek Dark Aesthetic**: Modern dark interface inspired by Apple & Zinc design principles.
-- **📄 Permissive Open-Source**: Licensed under MIT.
+- **📄 Permissive Open-Source**: Licensed under Apache 2.0.
 
 ---
 
@@ -110,4 +110,4 @@ npm run clean
 
 ## 📄 License
 
-Distributed under the MIT License. See [LICENSE](LICENSE) for more information.
+Distributed under the Apache 2.0 License. See [LICENSE](LICENSE) for more information.

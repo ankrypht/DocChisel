@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 authors = ["Ankush Sarkar"]
 description = "Pure Rust offline PDF and image processing engine"
-license = "MIT OR Apache-2.0"
+license = "Apache-2.0"
 
 [lib]
 crate-type = ["lib", "cdylib", "staticlib"]
