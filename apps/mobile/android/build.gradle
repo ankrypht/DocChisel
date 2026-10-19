@@ -25,13 +25,11 @@ apply plugin: "expo-root-project"
 apply plugin: "com.facebook.react.rootproject"
 
 subprojects {
-  afterEvaluate { project ->
-    tasks.matching { it.name == "clean" }.configureEach {
-      doLast {
-        def cxxDir = file("${project.projectDir}/.cxx")
-        if (cxxDir.exists()) {
-          delete(cxxDir)
-        }
+  tasks.matching { it.name == "clean" }.configureEach {
+    doLast {
+      def cxxDir = file("${project.projectDir}/.cxx")
+      if (cxxDir.exists()) {
+        delete(cxxDir)
       }
     }
   }

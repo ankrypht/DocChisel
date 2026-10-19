@@ -310,6 +310,7 @@ npm run desktop:package:mac
 npm run desktop:package:mac-universal
 ```
 - **Output location**: `target/universal-apple-darwin/release/bundle/dmg/*.dmg`
+- *Note: `rustup target add x86_64-apple-darwin aarch64-apple-darwin` is automatically executed via prebuild hooks to ensure compilation never fails due to missing targets.*
 
 ---
 
