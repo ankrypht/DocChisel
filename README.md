@@ -55,8 +55,11 @@ DocChisel/
 
 - [Node.js](https://nodejs.org/) (v20+)
 - [Rust](https://rustup.rs/) (v1.75+)
-- For Desktop builds: [Tauri Prerequisites](https://v2.tauri.app/start/prerequisites/)
+- For Desktop builds: [Tauri Prerequisites](https://v2.tauri.app/start/prerequisites/) (Windows C++ Build Tools on Windows, Xcode CLI on macOS)
 - For Mobile builds: Android Studio / Xcode, and [cargo-ndk](https://github.com/bbqsrc/cargo-ndk) (for Android NDK compilation)
+
+> [!NOTE]
+> All build, mobile engine generation, cleanup, and artifact packaging scripts in `scripts/` are written in native Node.js (`.mjs`) and execute seamlessly across Windows (PowerShell / CMD), macOS, and Linux without requiring WSL or Git Bash.
 
 ### Installation
 
