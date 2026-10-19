@@ -98,6 +98,14 @@ while IFS= read -r file; do
     fi
 done < <(find "$REPO_ROOT/apps/mobile/ios/build" "$REPO_ROOT/apps/mobile" -maxdepth 5 -type f -name "*.ipa" 2>/dev/null || true)
 
+# 6. Post-collection Android cleanup to save disk space and kill hanging daemons
+if [ -f "$REPO_ROOT/apps/mobile/android/gradlew" ]; then
+    (cd "$REPO_ROOT/apps/mobile/android" && ./gradlew --stop 2>/dev/null || true)
+fi
+rm -rf "$REPO_ROOT/apps/mobile/android/app/build/intermediates" \
+       "$REPO_ROOT/apps/mobile/android/app/.cxx" \
+       "$REPO_ROOT/apps/mobile/android/.cxx" 2>/dev/null || true
+
 echo ""
 if [ "$COUNT" -gt 0 ]; then
     echo "=================================================="

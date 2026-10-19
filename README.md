@@ -103,10 +103,14 @@ npm run typecheck
 
 ## 🧹 Maintenance & Cleanup
 
-To purge intermediate build outputs, CMake NDK caches, and temporary files:
+To purge intermediate build outputs, kill any lingering background Gradle Java daemons, and prune cached native transforms:
 
 ```bash
+# Standard clean: terminates Gradle daemons, cleans Cargo, Android & Expo caches
 npm run clean
+
+# Deep clean: also purges releases/ and runs npm dedupe
+npm run clean:deep
 ```
 
 ---

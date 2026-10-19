@@ -290,7 +290,17 @@ npm run mobile:build:bundle
 ```
 - **Output location**: `apps/mobile/android/app/build/outputs/bundle/release/app-release.aab`
 
-> **Note on Signing**: The repository is configured to sign release builds using the built-in debug keystore by default for effortless local builds. For Google Play store deployment, replace `debug.keystore` or configure your production signing key in `apps/mobile/android/app/build.gradle` and environment variables.
+> **Note on Production Signing**: The release build automatically checks for production upload credentials via environment variables:
+> ```bash
+> export DOCCHISEL_UPLOAD_STORE_FILE="/path/to/my-upload-key.keystore"
+> export DOCCHISEL_UPLOAD_STORE_PASSWORD="my-store-password"
+> export DOCCHISEL_UPLOAD_KEY_ALIAS="my-key-alias"
+> export DOCCHISEL_UPLOAD_KEY_PASSWORD="my-key-password"
+> ```
+> If these variables are not provided, Gradle falls back seamlessly to `debug.keystore` for frictionless local developer testing and CI evaluation.
+>
+> **ABI Splits & Universal APKs**:
+> Production builds generate per-architecture APKs (`app-arm64-v8a-release.apk`, `app-armeabi-v7a-release.apk`, `app-x86_64-release.apk`) alongside a universal APK (`app-universal-release.apk`) to guarantee the smallest possible download size for end users. The `.aab` bundle contains all architectures and 16 KB page-size aligned ELF binaries for Google Play Store distribution.
 
 ---
 
@@ -419,12 +429,15 @@ rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-and
 If Gradle or Cargo get into an inconsistent state after updating dependencies, run the workspace cleanup script:
 
 ```bash
-# Standard clean: clears Cargo target, Android Gradle builds, Expo/Vite caches
+# Standard clean: terminates hanging Gradle Java daemons, clears Cargo target,
+# Android Gradle build outputs, Expo/Vite caches, and pruned ~/.gradle transforms
 npm run clean
 
 # Deep clean: also purges node_modules and deep caches
 npm run clean:deep
 ```
+
+`npm run clean` automatically runs `./gradlew --stop` to kill background `GradleDaemon` and `KotlinCompileDaemon` processes holding onto RAM, and prunes bloated `~/.gradle/caches/transforms-*` and daemon logs to reclaim gigabytes of disk space.
 
 ---
 

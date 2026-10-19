@@ -7,6 +7,10 @@ AGENTS.md
 **/AGENTS.md
 .agents/
 skills-lock.json
+.agent-device/
+**/.agent-device/
+screenshots/
+**/screenshots/
 
 # --- Rust & Cargo ---
 target/
@@ -14,6 +18,16 @@ target/
 **/*.rs.bk
 *.cargo-ok
 Cargo.lock
+
+# --- Compiled Native Bridge Binaries ---
+**/jniLibs/**/*.so
+**/*.so
+**/*.a
+**/*.dylib
+**/*.dll
+**/*.xcframework/
+apps/mobile/modules/docchisel-bridge/ios/libcore_engine.a
+apps/mobile/modules/docchisel-bridge/android/src/main/jniLibs/
 
 # --- Node / Package Managers ---
 node_modules/
@@ -25,6 +39,7 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+*.log
 
 # --- Build Outputs & Caches ---
 dist/
@@ -49,6 +64,13 @@ releases/
 apps/desktop/src-tauri/target/
 apps/desktop/src-tauri/WixTools/
 apps/desktop/src-tauri/gen/
+*.dmg
+*.msi
+*.exe
+*.app/
+*.deb
+*.rpm
+*.AppImage
 
 # --- Expo & React Native Mobile ---
 .expo/
@@ -95,6 +117,8 @@ DerivedData/
 *.pem
 *.key
 *.cert
+*.p12
+*.mobileprovision
 
 # --- Operating System & Editors ---
 .DS_Store

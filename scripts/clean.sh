@@ -32,6 +32,12 @@ report_sizes() {
 echo "👉 Before Cleanup:"
 report_sizes
 
+# 0. Kill hanging Java / Gradle Daemons
+echo "==> Stopping any running Gradle daemon processes..."
+if [ -f "$REPO_ROOT/apps/mobile/android/gradlew" ]; then
+    (cd "$REPO_ROOT/apps/mobile/android" && ./gradlew --stop 2>/dev/null || true)
+fi
+
 # 1. Rust Targets
 echo "==> Purging Rust target build caches..."
 if command -v cargo &> /dev/null; then
@@ -76,6 +82,16 @@ if [ "$DEEP_MODE" = true ]; then
     echo "==> Deep mode enabled: Deduplicating node_modules and cleaning releases/..."
     rm -rf "$REPO_ROOT/releases"
     npm dedupe 2>/dev/null || true
+fi
+
+# 7. Clean bloated Gradle native transform caches and daemon logs in ~/.gradle
+if [ -d "$HOME/.gradle" ]; then
+    echo "==> Pruning bloated native transform caches and daemon logs in ~/.gradle..."
+    rm -rf "$HOME/.gradle/caches/transforms-"* \
+           "$HOME/.gradle/caches/build-cache-"* \
+           "$HOME/.gradle/caches/"*"/transforms" \
+           "$HOME/.gradle/caches/"*"/build-cache" \
+           "$HOME/.gradle/daemon" 2>/dev/null || true
 fi
 
 echo ""

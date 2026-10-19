@@ -35,6 +35,8 @@ if command -v cargo-ndk &> /dev/null; then
             build --release --package core_engine
         echo "✓ Multi-target Android .so libraries built in $ANDROID_JNILIBS"
     else
+        echo "==> Cleaning stale non-dev Android architectures from jniLibs..."
+        rm -rf "$ANDROID_JNILIBS/armeabi-v7a" "$ANDROID_JNILIBS/x86_64" "$ANDROID_JNILIBS/x86" 2>/dev/null || true
         echo "==> Compiling for Android [Dev: arm64-v8a only for Apple Silicon/modern devices] (16 KB aligned)..."
         cargo ndk -t arm64-v8a \
             -o "$ANDROID_JNILIBS" \
@@ -63,6 +65,29 @@ else
         echo "ℹ️ Simulator target not fully configured; using host dev build as placeholder."
         cp "$REPO_ROOT/target/debug/libcore_engine.a" "$IOS_LIB_DIR/libcore_engine.a" 2>/dev/null || true
     fi
+fi
+
+# 2.5 Strip symbols for release builds to minimize binary size
+if [ "$IS_RELEASE" = true ]; then
+    echo "==> Stripping unneeded symbols from release binaries..."
+    STRIP_CMD=""
+    if command -v llvm-strip &> /dev/null; then
+        STRIP_CMD="llvm-strip"
+    elif [ -n "${ANDROID_NDK_HOME:-}" ] && find "$ANDROID_NDK_HOME" -name "llvm-strip" 2>/dev/null | grep -q llvm-strip; then
+        STRIP_CMD="$(find "$ANDROID_NDK_HOME" -name "llvm-strip" 2>/dev/null | head -n 1)"
+    elif command -v strip &> /dev/null; then
+        STRIP_CMD="strip"
+    fi
+
+    if [ -n "$STRIP_CMD" ]; then
+        find "$ANDROID_JNILIBS" -type f -name "*.so" -exec "$STRIP_CMD" --strip-unneeded {} + 2>/dev/null || \
+        find "$ANDROID_JNILIBS" -type f -name "*.so" -exec "$STRIP_CMD" -x {} + 2>/dev/null || true
+    fi
+
+    if [ -f "$IOS_LIB_DIR/libcore_engine.a" ]; then
+        strip -S "$IOS_LIB_DIR/libcore_engine.a" 2>/dev/null || true
+    fi
+    echo "✓ Symbol stripping complete"
 fi
 
 # 3. Generate UniFFI bindings

@@ -13,7 +13,11 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.ankushsarkar.docchisel"
+      "bundleIdentifier": "com.ankushsarkar.docchisel",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "DocChisel needs access to your photo library to import images for conversion and editing.",
+        "NSPhotoLibraryAddUsageDescription": "DocChisel needs permission to save processed images to your photo library."
+      }
     },
     "android": {
       "adaptiveIcon": {
