@@ -11,8 +11,7 @@
     "tauri:dev": "tauri dev",
     "tauri:build:no-bundle": "tauri build --no-bundle",
     "build:mac": "tauri build",
-    "prebuild:mac-universal": "command -v rustup >/dev/null 2>&1 && rustup target add x86_64-apple-darwin aarch64-apple-darwin 2>/dev/null || true",
-    "build:mac-universal": "command -v rustup >/dev/null 2>&1 && rustup target add x86_64-apple-darwin aarch64-apple-darwin 2>/dev/null || true; tauri build --target universal-apple-darwin",
+    "build:mac-universal": "tauri build --target universal-apple-darwin",
     "build:windows": "tauri build --target x86_64-pc-windows-msvc"
   },
   "dependencies": {

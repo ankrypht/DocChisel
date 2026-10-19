@@ -1,6 +1,7 @@
 # DocChisel — Build, Test & Packaging Guide
 
 This document provides a comprehensive, step-by-step guide for anyone cloning the **DocChisel** repository from GitHub. It covers:
+
 - System prerequisites for every target platform
 - Initial workspace installation and verification
 - Testing and hot-reload development servers (Desktop, Android, and iOS)
@@ -60,6 +61,7 @@ DocChisel/
 ## 🧰 Prerequisites by Platform
 
 ### 1. Common Tooling (All Platforms)
+
 - **Node.js**: `v20.x` or `v22.x` LTS ([Download Node.js](https://nodejs.org/))
 - **npm**: `v10+` (bundled with Node.js)
 - **Rust**: `v1.75+` ([Install rustup](https://rustup.rs/))
@@ -74,7 +76,9 @@ DocChisel/
 ---
 
 ### 2. macOS & iOS Tooling (Apple Silicon & Intel)
+
 Required for building macOS desktop apps and iOS mobile apps:
+
 1. **Xcode**: Install Xcode 15+ from the Mac App Store or Apple Developer portal.
 2. **Xcode Command Line Tools**:
    ```bash
@@ -86,6 +90,7 @@ Required for building macOS desktop apps and iOS mobile apps:
    # or: sudo gem install cocoapods
    ```
 4. **Rust Target Toolchains**:
+
    ```bash
    # macOS targets
    rustup target add aarch64-apple-darwin
@@ -100,9 +105,11 @@ Required for building macOS desktop apps and iOS mobile apps:
 ---
 
 ### 3. Windows Desktop Tooling
+
 Required for building Windows `.msi` and `.exe` installers:
+
 1. **Visual Studio 2022 / Build Tools**:
-   - Install **Visual Studio C++ Build Tools** (Select the *"Desktop development with C++"* workload).
+   - Install **Visual Studio C++ Build Tools** (Select the _"Desktop development with C++"_ workload).
 2. **WebView2**:
    - Included by default on Windows 10/11; otherwise install the [Evergreen WebView2 Bootstrapper](https://developer.microsoft.com/en-us/microsoft-edge/webview2/).
 3. **WiX Toolset (for MSI generation)**:
@@ -115,7 +122,9 @@ Required for building Windows `.msi` and `.exe` installers:
 ---
 
 ### 4. Android Tooling (APK & .AAB on macOS, Windows, or Linux)
+
 Required for building Android debug/release APKs and Google Play `.aab` bundles:
+
 1. **JDK 17**:
    - Install OpenJDK 17 or Eclipse Temurin 17 ([Adoptium](https://adoptium.net/)).
    - Set `JAVA_HOME` pointing to JDK 17.
@@ -174,14 +183,16 @@ npm run check:all
 ## ⚡ Testing & Hot-Reload Development
 
 ### 1. Desktop App Development (with Hot Reload)
+
 The desktop app combines a React 19 + Tailwind CSS frontend with a Tauri v2 native wrapper.
 
 ```bash
 npm run desktop:dev
 ```
+
 - **Hot Module Replacement (HMR)**: Any edits made to `apps/desktop/src/` (components, pages, styles) update instantly in the running desktop window.
 - **Rust Auto-Recompile**: Any edits made to `apps/desktop/src-tauri/` or `crates/core_engine/` will automatically trigger a Cargo rebuild and reload the desktop app.
-- *(Optional)* Web-only preview without launching Tauri:
+- _(Optional)_ Web-only preview without launching Tauri:
   ```bash
   cd apps/desktop
   npm run dev
@@ -215,7 +226,8 @@ npm run mobile:android
 ---
 
 ### 3. iOS App Development (with Hot Reload)
-*(Requires macOS and Xcode)*
+
+_(Requires macOS and Xcode)_
 
 ```bash
 # Step 1: Build the mobile Rust engine for iOS targets
@@ -233,6 +245,7 @@ npm run mobile:ios
 ---
 
 ### 4. Rust Core Engine Tests
+
 DocChisel follows a test-driven architecture. All PDF and image manipulation tools have integration tests:
 
 ```bash
@@ -246,6 +259,7 @@ cargo test --package core_engine
 ---
 
 ### 5. TypeScript Type Checking
+
 Validate type safety across `@docchisel/shared`, `@docchisel/desktop`, and `@docchisel/mobile`:
 
 ```bash
@@ -263,6 +277,7 @@ All production builds can be run directly from the workspace root. After buildin
 ### 1. Android Production Builds (APK & .AAB)
 
 #### Step A: Compile the Multi-Architecture Release Engine
+
 Builds 16 KB page-size aligned `.so` libraries for `arm64-v8a`, `armeabi-v7a`, and `x86_64`:
 
 ```bash
@@ -270,33 +285,39 @@ npm run mobile:build-engine:release
 ```
 
 #### Step B1: Build Android Release APK (`.apk`)
+
 Generates an installable `.apk` file:
 
 ```bash
 npm run mobile:build:apk-release
 ```
+
 - **Output location**: `apps/mobile/android/app/build/outputs/apk/release/app-release.apk`
-- *(Optional)* To build a debug APK for quick sideloading:
+- _(Optional)_ To build a debug APK for quick sideloading:
   ```bash
   npm run mobile:build:apk-debug
   # Output: apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
   ```
 
 #### Step B2: Build Android App Bundle (`.aab` for Google Play Store)
+
 Generates the optimized `.aab` distribution package for Google Play Console:
 
 ```bash
 npm run mobile:build:bundle
 ```
+
 - **Output location**: `apps/mobile/android/app/build/outputs/bundle/release/app-release.aab`
 
 > **Note on Production Signing**: The release build automatically checks for production upload credentials via environment variables:
+>
 > ```bash
 > export DOCCHISEL_UPLOAD_STORE_FILE="/path/to/my-upload-key.keystore"
 > export DOCCHISEL_UPLOAD_STORE_PASSWORD="my-store-password"
 > export DOCCHISEL_UPLOAD_KEY_ALIAS="my-key-alias"
 > export DOCCHISEL_UPLOAD_KEY_PASSWORD="my-key-password"
 > ```
+>
 > If these variables are not provided, Gradle falls back seamlessly to `debug.keystore` for frictionless local developer testing and CI evaluation.
 >
 > **ABI Splits & Universal APKs**:
@@ -305,31 +326,37 @@ npm run mobile:build:bundle
 ---
 
 ### 2. macOS Desktop Builds (DMG & .app)
-*(Run on macOS)*
+
+_(Run on macOS)_
 
 #### Build for Current Host Architecture:
+
 ```bash
 npm run desktop:package:mac
 ```
+
 - **Output location**:
   - DMG Installer: `target/release/bundle/dmg/DocChisel_0.1.0_aarch64.dmg` (or `x86_64`)
   - App Bundle: `target/release/bundle/macos/DocChisel.app`
 
 #### Build Universal macOS Binary (Apple Silicon + Intel):
+
 ```bash
 npm run desktop:package:mac-universal
 ```
-- **Output location**: `target/universal-apple-darwin/release/bundle/dmg/*.dmg`
-- *Note: `rustup target add x86_64-apple-darwin aarch64-apple-darwin` is automatically executed via prebuild hooks to ensure compilation never fails due to missing targets.*
+
+- **Output location**: `target/universal-apple-darwin/release/bundle/dmg/*.dmg`s
 
 ---
 
 ### 3. Windows Desktop Builds (MSI & .exe)
-*(Run on Windows with Visual Studio C++ Build Tools installed)*
+
+_(Run on Windows with Visual Studio C++ Build Tools installed)_
 
 ```bash
 npm run desktop:package:windows
 ```
+
 - **Output location**:
   - Windows MSI Installer: `target/release/bundle/msi/DocChisel_0.1.0_x64_en-US.msi`
   - NSIS Setup Executable: `target/release/bundle/nsis/DocChisel_0.1.0_x64-setup.exe`
@@ -337,7 +364,8 @@ npm run desktop:package:windows
 ---
 
 ### 4. iOS Mobile Builds
-*(Run on macOS with Xcode)*
+
+_(Run on macOS with Xcode)_
 
 ```bash
 # Step 1: Compile iOS native engine in release mode
@@ -348,6 +376,7 @@ npm run mobile:ios:release
 ```
 
 Alternatively, open `apps/mobile/ios/docchisel.xcworkspace` in Xcode to archive and export a signed `.ipa` using your Apple Developer Team provisioning profile:
+
 ```bash
 open apps/mobile/ios/docchisel.xcworkspace
 # In Xcode menu: Product -> Archive -> Distribute App
@@ -365,6 +394,7 @@ npm run package:artifacts
 ```
 
 ### What this does:
+
 1. Automatically scans all build directories for newly produced binaries.
 2. Copies and organizes them into a single clean folder in your workspace root:
    ```
@@ -391,41 +421,48 @@ npm run package:artifacts
 
 The following root npm scripts allow you to build **and** automatically collect your binaries in a single command:
 
-| Command | Action | Output in `releases/` |
-| :--- | :--- | :--- |
-| `npm run package:android` | Builds release engine + APK + `.aab` + collects | `releases/android/*.apk` & `*.aab` |
-| `npm run package:android:apk` | Builds release engine + Release APK + collects | `releases/android/*.apk` |
-| `npm run package:android:aab` | Builds release engine + Release `.aab` + collects | `releases/android/*.aab` |
-| `npm run package:mac` | Builds macOS DMG & App bundle + collects | `releases/macos/*.dmg` & `.app` |
-| `npm run package:mac-universal` | Builds Universal macOS bundle + collects | `releases/macos/*.dmg` & `.app` |
-| `npm run package:windows` | Builds Windows MSI & EXE installer + collects | `releases/windows/*.msi` & `*.exe` |
-| `npm run package:ios` | Builds release engine + iOS release + collects | `releases/ios/*.ipa` |
-| `npm run package:artifacts` | Gathers any existing built binaries into `releases/` | `releases/<platform>/` |
+| Command                         | Action                                               | Output in `releases/`              |
+| :------------------------------ | :--------------------------------------------------- | :--------------------------------- |
+| `npm run package:android`       | Builds release engine + APK + `.aab` + collects      | `releases/android/*.apk` & `*.aab` |
+| `npm run package:android:apk`   | Builds release engine + Release APK + collects       | `releases/android/*.apk`           |
+| `npm run package:android:aab`   | Builds release engine + Release `.aab` + collects    | `releases/android/*.aab`           |
+| `npm run package:mac`           | Builds macOS DMG & App bundle + collects             | `releases/macos/*.dmg` & `.app`    |
+| `npm run package:mac-universal` | Builds Universal macOS bundle + collects             | `releases/macos/*.dmg` & `.app`    |
+| `npm run package:windows`       | Builds Windows MSI & EXE installer + collects        | `releases/windows/*.msi` & `*.exe` |
+| `npm run package:ios`           | Builds release engine + iOS release + collects       | `releases/ios/*.ipa`               |
+| `npm run package:artifacts`     | Gathers any existing built binaries into `releases/` | `releases/<platform>/`             |
 
 ---
 
 ## 🔧 Troubleshooting & Maintenance
 
 ### 1. Android NDK "16 KB page-size alignment" warnings
+
 Android 15+ devices require native ELF binaries to be aligned to 16 KB boundaries.
 DocChisel's `scripts/build-mobile-engine.sh` automatically passes `-C link-arg=-Wl,-z,max-page-size=16384` to `cargo-ndk`. Ensure you run:
+
 ```bash
 npm run mobile:build-engine:release
 ```
 
 ### 2. Missing `cargo-ndk`
+
 If you encounter `cargo-ndk: command not found`:
+
 ```bash
 cargo install cargo-ndk
 ```
 
 ### 3. Missing Android targets in Rust
+
 If Android compilation fails due to missing standard libraries:
+
 ```bash
 rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android
 ```
 
 ### 4. Cleaning build caches
+
 If Gradle or Cargo get into an inconsistent state after updating dependencies, run the workspace cleanup script:
 
 ```bash
