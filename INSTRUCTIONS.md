@@ -62,9 +62,9 @@ DocChisel/
 
 ### 1. Common Tooling (All Platforms)
 
-- **Node.js**: `v20.x` or `v22.x` LTS ([Download Node.js](https://nodejs.org/))
-- **npm**: `v10+` (bundled with Node.js)
-- **Rust**: `v1.75+` ([Install rustup](https://rustup.rs/))
+- **Node.js**: `v24.x` LTS ([Download Node.js](https://nodejs.org/))
+- **npm**: (bundled with Node.js)
+- **Rust**: `v1.99+` ([Install rustup](https://rustup.rs/))
   ```bash
   # Verify installation
   node -v
