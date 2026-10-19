@@ -50,9 +50,9 @@ DocChisel/
 ├── packages/
 │   └── shared/           # Shared TypeScript types, schemas, and tool catalog definitions
 ├── scripts/
-│   ├── build-mobile-engine.sh # Compiles Rust core_engine to .so / .a and generates UniFFI bindings
-│   ├── collect-artifacts.sh   # Gathers all compiled binaries into the root /releases directory
-│   └── clean.sh               # Deep cleaner for build caches and temp files
+│   ├── build-mobile-engine.mjs# Cross-platform compiler for Rust core_engine to .so / .a and UniFFI bindings
+│   ├── collect-artifacts.mjs  # Cross-platform collector gathering binaries into /releases
+│   └── clean.mjs              # Cross-platform deep cleaner for build caches and temp files
 └── releases/             # Unified destination for all production binaries (.apk, .aab, .dmg, .exe)
 ```
 
@@ -390,7 +390,7 @@ To prevent developers from having to dig through nested build trees (`apps/mobil
 
 ```bash
 npm run package:artifacts
-# or: bash scripts/collect-artifacts.sh
+# or: node scripts/collect-artifacts.mjs
 ```
 
 ### What this does:
@@ -439,7 +439,7 @@ The following root npm scripts allow you to build **and** automatically collect 
 ### 1. Android NDK "16 KB page-size alignment" warnings
 
 Android 15+ devices require native ELF binaries to be aligned to 16 KB boundaries.
-DocChisel's `scripts/build-mobile-engine.sh` automatically passes `-C link-arg=-Wl,-z,max-page-size=16384` to `cargo-ndk`. Ensure you run:
+DocChisel's `scripts/build-mobile-engine.mjs` automatically passes `-C link-arg=-Wl,-z,max-page-size=16384` to `cargo-ndk`. Ensure you run:
 
 ```bash
 npm run mobile:build-engine:release
