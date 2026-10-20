@@ -51,7 +51,7 @@ DocChisel/
 ## 🚀 Getting Started
 
 > [!TIP]
-> **Complete Build, Test & Packaging Guide**: See [INSTRUCTIONS.md](INSTRUCTIONS.md) for step-by-step setup, hot-reload dev servers, building Android APK & Google Play `.aab`, macOS DMG, Windows MSI/EXE, Linux DEB & AppImage, and exporting all release binaries to the unified `releases/` directory.
+> **Complete Build, Test & Packaging Guide**: See [INSTRUCTIONS.md](INSTRUCTIONS.md) for step-by-step setup, hot-reload dev servers, building Android APKs & Google Play `.aab`, macOS Universal DMG, Windows NSIS Setup `.exe`, Linux DEB & AppImage, and exporting all release binaries to the unified `releases/` directory.
 
 ### Prerequisites
 
@@ -98,25 +98,29 @@ npm run desktop:dev
 npm run desktop:dev:web
 ```
 
-### Packaging Desktop Apps
+### Packaging Apps for Production
 
-```bash
-# Linux: Build Debian package (.deb) and AppImage
-npm run desktop:package:linux
-# Or build specific formats:
-# npm run desktop:package:linux:deb
-# npm run desktop:package:linux:appimage
-# npm run desktop:package:linux:rpm
+1. **Build for your target platform**:
+   ```bash
+   # macOS: Build Universal DMG (Apple Silicon + Intel)
+   npm run desktop:package:mac-universal
+   # or for host-architecture testing: npm run desktop:package:mac
 
-# macOS: Build DMG installer & .app bundle
-npm run desktop:package:mac
+   # Windows: Build NSIS Setup (.exe) installer
+   npm run desktop:package:windows
 
-# Windows: Build MSI & NSIS Setup (.exe)
-npm run desktop:package:windows
+   # Linux: Build Debian (.deb) package and standalone AppImage
+   npm run desktop:package:linux
 
-# Collect all built binaries into the unified releases/ directory
-npm run package:artifacts
-```
+   # Android: Build 3 release APKs (arm64, armv7, universal) & Google Play .aab
+   npm run mobile:build:apk-release
+   npm run mobile:build:bundle
+   ```
+
+2. **Collect all binaries into the unified `releases/` folder**:
+   ```bash
+   npm run package:artifacts
+   ```
 
 ### Running the Mobile App
 

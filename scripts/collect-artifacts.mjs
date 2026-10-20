@@ -7,10 +7,23 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const REPO_ROOT = path.resolve(__dirname, '..');
 
+// Dynamically read version from root package.json
+const pkgJsonPath = path.join(REPO_ROOT, 'package.json');
+let version = '0.1.0';
+try {
+  const pkgData = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf8'));
+  if (pkgData.version) {
+    version = pkgData.version;
+  }
+} catch (err) {
+  console.warn(`⚠️ Warning: Could not read package.json version, falling back to ${version}: ${err.message}`);
+}
+
 const destDir = process.argv[2] ? path.resolve(process.argv[2]) : path.join(REPO_ROOT, 'releases');
 
 console.log('==================================================');
-console.log('📦 [DocChisel] Collecting Release Artifacts');
+console.log('📦 [DocChisel] Collecting Lean Release Artifacts');
+console.log(`   Version:     v${version}`);
 console.log(`   Destination: ${destDir}`);
 console.log('==================================================');
 
@@ -27,27 +40,14 @@ function formatBytes(bytes) {
   return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
 }
 
-function recordFile(src, destSubdir) {
-  const filename = path.basename(src);
+function recordFile(src, destSubdir, explicitName = null) {
+  const filename = explicitName || path.basename(src);
   const targetSubdir = path.join(destDir, destSubdir);
   fs.mkdirSync(targetSubdir, { recursive: true });
   const targetPath = path.join(targetSubdir, filename);
   fs.copyFileSync(src, targetPath);
   const stats = fs.statSync(targetPath);
   console.log(`  ✓ [${destSubdir}] ${filename} (${formatBytes(stats.size)})`);
-  count++;
-}
-
-function recordDirectory(srcDir, destSubdir) {
-  const dirName = path.basename(srcDir);
-  const targetSubdir = path.join(destDir, destSubdir);
-  fs.mkdirSync(targetSubdir, { recursive: true });
-  const targetDir = path.join(targetSubdir, dirName);
-  if (fs.existsSync(targetDir)) {
-    fs.rmSync(targetDir, { recursive: true, force: true });
-  }
-  fs.cpSync(srcDir, targetDir, { recursive: true });
-  console.log(`  ✓ [${destSubdir}] ${dirName} (App Bundle Directory)`);
   count++;
 }
 
@@ -70,87 +70,136 @@ function findFilesRecursive(dir, filterFn, maxDepth = 10, currentDepth = 0) {
   return results;
 }
 
-function findDirsRecursive(dir, filterFn, maxDepth = 6, currentDepth = 0) {
-  if (currentDepth > maxDepth || !fs.existsSync(dir)) return [];
-  const results = [];
-  try {
-    const entries = fs.readdirSync(dir, { withFileTypes: true });
-    for (const entry of entries) {
-      const fullPath = path.join(dir, entry.name);
-      if (entry.isDirectory()) {
-        if (filterFn(entry.name, fullPath)) {
-          results.push(fullPath);
-        } else {
-          results.push(...findDirsRecursive(fullPath, filterFn, maxDepth, currentDepth + 1));
-        }
-      }
-    }
-  } catch {
-    // Ignore permissions or transient read errors
-  }
-  return results;
-}
-
-// 1. Android APKs
-console.log('==> Checking for Android APKs...');
+// 1. Android Releases (Only arm64-v8a, armeabi-v7a, universal APKs, and release .aab)
+console.log('==> Checking for Android release artifacts...');
 const apkDir = path.join(REPO_ROOT, 'apps/mobile/android/app/build/outputs/apk');
-for (const file of findFilesRecursive(apkDir, (name) => name.endsWith('.apk'))) {
-  recordFile(file, 'android');
-}
-
-// 2. Android App Bundles (.aab)
-console.log('==> Checking for Android App Bundles (.aab)...');
 const bundleDir = path.join(REPO_ROOT, 'apps/mobile/android/app/build/outputs/bundle');
-for (const file of findFilesRecursive(bundleDir, (name) => name.endsWith('.aab'))) {
-  recordFile(file, 'android');
+
+let foundAndroidRelease = false;
+
+if (fs.existsSync(apkDir)) {
+  const allApks = findFilesRecursive(apkDir, (name) => name.endsWith('.apk'));
+
+  // Prioritize release APKs
+  const releaseApks = allApks.filter((p) => p.toLowerCase().includes('release'));
+  const apksToProcess = releaseApks.length > 0 ? releaseApks : allApks;
+
+  for (const apkPath of apksToProcess) {
+    const name = path.basename(apkPath).toLowerCase();
+
+    // Explicitly DROP x86 (32-bit) and standalone x86_64 split APKs
+    if (name.includes('x86')) {
+      continue;
+    }
+
+    if (name.includes('arm64-v8a')) {
+      recordFile(apkPath, 'android', `DocChisel-${version}-arm64-v8a-release.apk`);
+      foundAndroidRelease = true;
+    } else if (name.includes('armeabi-v7a')) {
+      recordFile(apkPath, 'android', `DocChisel-${version}-armeabi-v7a-release.apk`);
+      foundAndroidRelease = true;
+    } else if (name.includes('universal')) {
+      recordFile(apkPath, 'android', `DocChisel-${version}-universal-release.apk`);
+      foundAndroidRelease = true;
+    } else if (name.includes('release') && !name.includes('unspecified')) {
+      // In case AGP built a non-split monolithic release APK
+      recordFile(apkPath, 'android', `DocChisel-${version}-universal-release.apk`);
+      foundAndroidRelease = true;
+    }
+  }
 }
 
-// 3. macOS Desktop (.dmg and .app bundle)
+if (fs.existsSync(bundleDir)) {
+  const bundles = findFilesRecursive(bundleDir, (name) => name.endsWith('.aab'));
+  for (const bundlePath of bundles) {
+    recordFile(bundlePath, 'android', `DocChisel-${version}-release.aab`);
+    foundAndroidRelease = true;
+  }
+}
+
+// Immediately reclaim Android intermediate disk space if release artifacts were found
+if (foundAndroidRelease) {
+  try {
+    const intermediates = path.join(REPO_ROOT, 'apps/mobile/android/app/build/intermediates');
+    const cxx = path.join(REPO_ROOT, 'apps/mobile/android/app/.cxx');
+    if (fs.existsSync(intermediates)) fs.rmSync(intermediates, { recursive: true, force: true });
+    if (fs.existsSync(cxx)) fs.rmSync(cxx, { recursive: true, force: true });
+    console.log('  ✓ Reclaimed Android intermediate build disk space');
+  } catch {}
+}
+
+// 2. macOS Desktop (DMG installer ONLY; NEVER loose .app folder)
 console.log('==> Checking for macOS bundles...');
-const searchDirs = [
+const desktopSearchDirs = [
   path.join(REPO_ROOT, 'target'),
   path.join(REPO_ROOT, 'apps/desktop/src-tauri/target'),
 ];
 
-for (const sDir of searchDirs) {
-  // DMG installers
+let foundMacUniversal = false;
+const dmgCandidates = [];
+
+for (const sDir of desktopSearchDirs) {
   for (const file of findFilesRecursive(sDir, (name) => name.endsWith('.dmg'))) {
-    recordFile(file, 'macos');
-  }
-  // macOS .app bundles (under bundle/macos/)
-  const appDirs = findDirsRecursive(sDir, (name, full) => {
-    return name.endsWith('.app') && full.replace(/\\/g, '/').includes('/bundle/macos/');
-  });
-  for (const aDir of appDirs) {
-    recordDirectory(aDir, 'macos');
+    dmgCandidates.push(file);
+    if (file.toLowerCase().includes('universal')) {
+      foundMacUniversal = true;
+    }
   }
 }
 
-// 4. Windows Desktop (.msi and .exe installers)
+if (foundMacUniversal) {
+  // Collect only the universal DMG
+  for (const dmg of dmgCandidates) {
+    if (dmg.toLowerCase().includes('universal')) {
+      recordFile(dmg, 'macos', `DocChisel_${version}_universal.dmg`);
+    }
+  }
+} else {
+  // Fall back to host-architecture DMG if universal DMG wasn't generated
+  for (const dmg of dmgCandidates) {
+    const base = path.basename(dmg);
+    const arch = base.includes('aarch64') ? 'aarch64' : (base.includes('x86_64') ? 'x86_64' : '');
+    const finalName = arch ? `DocChisel_${version}_${arch}.dmg` : `DocChisel_${version}.dmg`;
+    recordFile(dmg, 'macos', finalName);
+  }
+}
+
+// 3. Windows Desktop (NSIS .exe setup ONLY; NEVER .msi)
 console.log('==> Checking for Windows installers...');
-for (const sDir of searchDirs) {
-  const winInstallers = findFilesRecursive(sDir, (name) => {
+for (const sDir of desktopSearchDirs) {
+  const winInstallers = findFilesRecursive(sDir, (name, fullPath) => {
     const lower = name.toLowerCase();
-    return lower.endsWith('.msi') || (lower.endsWith('.exe') && lower.includes('setup'));
+    const fullLower = fullPath.replace(/\\/g, '/').toLowerCase();
+    // Match NSIS setup executable only; drop .msi
+    return (lower.endsWith('.exe') && (lower.includes('setup') || fullLower.includes('/nsis/')));
   });
-  for (const file of winInstallers) {
-    recordFile(file, 'windows');
+
+  for (const exePath of winInstallers) {
+    recordFile(exePath, 'windows', `DocChisel_${version}_x64-setup.exe`);
   }
 }
 
-// 5. Linux Desktop (.deb, .AppImage, .rpm)
+// 4. Linux Desktop (.deb and .AppImage ONLY; NEVER .rpm)
 console.log('==> Checking for Linux packages...');
-for (const sDir of searchDirs) {
-  const linuxPackages = findFilesRecursive(sDir, (name) => {
-    const lower = name.toLowerCase();
-    return lower.endsWith('.deb') || lower.endsWith('.appimage') || lower.endsWith('.rpm');
-  });
-  for (const file of linuxPackages) {
-    recordFile(file, 'linux');
+for (const sDir of desktopSearchDirs) {
+  // DEB package
+  const debs = findFilesRecursive(sDir, (name) => name.toLowerCase().endsWith('.deb'));
+  for (const deb of debs) {
+    const base = path.basename(deb);
+    const arch = base.includes('arm64') ? 'arm64' : 'amd64';
+    recordFile(deb, 'linux', `DocChisel_${version}_${arch}.deb`);
+  }
+
+  // AppImage
+  const appImages = findFilesRecursive(sDir, (name) => name.toLowerCase().endsWith('.appimage'));
+  for (const appImage of appImages) {
+    const base = path.basename(appImage);
+    const arch = base.includes('arm64') ? 'arm64' : 'amd64';
+    recordFile(appImage, 'linux', `DocChisel_${version}_${arch}.AppImage`);
   }
 }
 
-// 6. iOS (.ipa) - Optional & Untested
+// 5. iOS (.ipa) - Optional & Untested
 console.log('==> Checking for iOS builds (optional / untested)...');
 const iosSearchDirs = [
   path.join(REPO_ROOT, 'apps/mobile/ios/build'),
@@ -159,7 +208,7 @@ const iosSearchDirs = [
 let foundIos = false;
 for (const iDir of iosSearchDirs) {
   for (const file of findFilesRecursive(iDir, (name) => name.endsWith('.ipa'), 5)) {
-    recordFile(file, 'ios');
+    recordFile(file, 'ios', `DocChisel_${version}.ipa`);
     foundIos = true;
   }
 }
@@ -167,7 +216,7 @@ if (!foundIos) {
   console.log('  ℹ️ No iOS builds found (iOS build pipeline is preserved but untested & unreleased).');
 }
 
-// Post-collection cleanup of disposable intermediate scratch caches
+// Post-collection auto-prune of disposable intermediate scratch caches
 try {
   const pruneScript = path.join(REPO_ROOT, 'scripts/prune-intermediates.mjs');
   if (fs.existsSync(pruneScript)) {
@@ -178,7 +227,7 @@ try {
 console.log('');
 if (count > 0) {
   console.log('==================================================');
-  console.log(`🎉 Successfully gathered ${count} artifact(s) into:`);
+  console.log(`🎉 Successfully gathered ${count} finalized artifact(s) into:`);
   console.log(`   ${destDir}`);
   console.log('==================================================');
   console.log('\n--- Released Files ---');
@@ -197,14 +246,13 @@ if (count > 0) {
   console.log('----------------------');
 } else {
   console.log('ℹ️ No newly built artifacts found yet to collect.');
-  console.log('\nTo build artifacts:');
-  console.log('  • Android APK:       npm run mobile:build:apk-release');
+  console.log('\nTo build finalized artifacts:');
+  console.log('  • Android APKs (3):  npm run mobile:build:apk-release');
   console.log('  • Android AAB:       npm run mobile:build:bundle');
-  console.log('  • macOS Desktop:     npm run desktop:package:mac');
-  console.log('  • Windows Desktop:   npm run desktop:package:windows');
-  console.log('  • Linux Desktop:     npm run desktop:package:linux');
+  console.log('  • macOS Universal:   npm run desktop:package:mac-universal');
+  console.log('  • Windows NSIS:      npm run desktop:package:windows');
+  console.log('  • Linux DEB/AppImage:npm run desktop:package:linux');
   console.log('  • All Desktop:       npm run desktop:package:all');
-  console.log('  • iOS App (Future):  npm run mobile:ios:release (Option preserved; untested)');
   console.log('\nAfter building, collect all binaries with:');
   console.log('  • npm run package:artifacts');
   console.log('==================================================');

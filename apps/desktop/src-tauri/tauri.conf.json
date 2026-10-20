@@ -32,7 +32,12 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": [
+      "dmg",
+      "nsis",
+      "deb",
+      "appimage"
+    ],
     "category": "Utility",
     "copyright": "Copyright © 2026 Ankush Sarkar. All rights reserved.",
     "shortDescription": "100% Local, Offline PDF & Image Toolkit",
@@ -56,18 +61,12 @@
       },
       "appimage": {
         "bundleMediaFramework": false
-      },
-      "rpm": {
-        "release": "1"
       }
     },
     "macOS": {
       "minimumSystemVersion": "10.15"
     },
     "windows": {
-      "wix": {
-        "language": "en-US"
-      },
       "nsis": {
         "languages": ["English"],
         "displayLanguageSelector": false

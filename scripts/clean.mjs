@@ -43,6 +43,22 @@ try {
 
 // 2. Android Build Artifacts & Caches
 console.log('==> Cleaning Android build artifacts & intermediate caches...');
+// Try stopping any active Gradle daemon first to free memory and file locks
+try {
+  const gradlew = path.join(REPO_ROOT, 'apps/mobile/android/gradlew');
+  if (fs.existsSync(gradlew)) {
+    const gradlewCmd = process.platform === 'win32' ? 'gradlew.bat --stop' : './gradlew --stop';
+    execSync(gradlewCmd, { cwd: path.join(REPO_ROOT, 'apps/mobile/android'), stdio: 'ignore' });
+    console.log('  ✓ Gradle daemon stopped');
+  }
+} catch {}
+
+if (process.platform !== 'win32') {
+  try {
+    execSync("pkill -f 'GradleDaemon' || true", { stdio: 'ignore' });
+  } catch {}
+}
+
 const androidCleanPaths = [
   path.join(REPO_ROOT, 'apps/mobile/android/app/build'),
   path.join(REPO_ROOT, 'apps/mobile/android/build'),
@@ -55,15 +71,6 @@ const androidCleanPaths = [
 for (const p of androidCleanPaths) {
   removeSafe(p);
 }
-
-// Try stopping any active Gradle daemon to free memory and locks
-try {
-  const gradlew = path.join(REPO_ROOT, 'apps/mobile/android/gradlew');
-  if (fs.existsSync(gradlew)) {
-    const gradlewCmd = process.platform === 'win32' ? 'gradlew.bat --stop' : './gradlew --stop';
-    execSync(gradlewCmd, { cwd: path.join(REPO_ROOT, 'apps/mobile/android'), stdio: 'ignore' });
-  }
-} catch {}
 
 // 3. Clean Android native build caches inside node_modules
 const nmDir = path.join(REPO_ROOT, 'node_modules');

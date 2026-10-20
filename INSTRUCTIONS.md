@@ -5,7 +5,7 @@ This document provides a comprehensive, step-by-step guide for anyone cloning th
 - System prerequisites for every target platform
 - Initial workspace installation and verification
 - Testing and hot-reload development servers (Desktop, Android, and future iOS)
-- Building production binaries for supported operating systems (**Android APK & `.aab`**, **macOS DMG & `.app`**, **Windows `.msi` & `.exe`**, **Linux `.deb` & `.AppImage`**, and optional **iOS**)
+- Building production binaries for supported operating systems (**Android APKs & `.aab`**, **macOS Universal `.dmg`**, **Windows NSIS `.exe`**, **Linux `.deb` & `.AppImage`**, and optional **iOS**)
 - Automatic collection of all final release binaries into a unified root directory: `releases/`
 
 ---
@@ -27,10 +27,10 @@ This document provides a comprehensive, step-by-step guide for anyone cloning th
    - [Rust Core Engine Tests](#4-rust-core-engine-tests)
    - [TypeScript Type Checking](#5-typescript-type-checking)
 5. [Production Build & Packaging](#-production-build--packaging)
-   - [Android: Release APK and Google Play .aab](#1-android-production-builds-apk--aab)
-   - [macOS Desktop: DMG and .app](#2-macos-desktop-builds-dmg--app)
-   - [Windows Desktop: MSI and Setup .exe](#3-windows-desktop-builds-msi--exe)
-   - [Linux Desktop: DEB, AppImage and RPM](#4-linux-desktop-builds-deb-appimage--rpm)
+   - [Android: Release APKs and Google Play .aab](#1-android-production-builds-apk--aab)
+   - [macOS Desktop: Universal DMG](#2-macos-desktop-builds-dmg)
+   - [Windows Desktop: NSIS Setup .exe](#3-windows-desktop-builds-nsis-setup-exe)
+   - [Linux Desktop: DEB and AppImage](#4-linux-desktop-builds-deb-and-appimage)
    - [iOS Mobile: Release Bundle (Optional / Untested)](#5-ios-mobile-builds-optional--untested)
 6. [Brand Assets & Icon Generation Pipeline](#-brand-assets--icon-generation-pipeline)
 7. [Unified Artifact Collection (`releases/`)](#-unified-artifact-collection-releases)
@@ -114,15 +114,13 @@ Required for building macOS desktop apps (and optionally iOS mobile apps):
 
 ### 3. Windows Desktop Tooling
 
-Required for building Windows `.msi` and `.exe` installers:
+Required for building Windows NSIS `.exe` setup installers:
 
 1. **Visual Studio 2022 / Build Tools**:
    - Install **Visual Studio C++ Build Tools** (Select the _"Desktop development with C++"_ workload).
 2. **WebView2**:
    - Included by default on Windows 10/11; otherwise install the [Evergreen WebView2 Bootstrapper](https://developer.microsoft.com/en-us/microsoft-edge/webview2/).
-3. **WiX Toolset (for MSI generation)**:
-   - Tauri v2 uses WiX or NSIS to bundle Windows installers. Install WiX v3.11 or v4 if building `.msi`.
-4. **Rust Windows Target**:
+3. **Rust Windows Target**:
    ```bash
    rustup default stable-x86_64-pc-windows-msvc
    ```
@@ -131,7 +129,7 @@ Required for building Windows `.msi` and `.exe` installers:
 
 ### 4. Linux Desktop Tooling (Ubuntu/Debian, Fedora, Arch Linux, openSUSE)
 
-Required for developing, compiling, and packaging Linux desktop applications (`.deb`, `.AppImage`, and `.rpm`):
+Required for developing, compiling, and packaging Linux desktop applications (`.deb` and `.AppImage`):
 
 1. **System & WebKitGTK Dependencies**:
    Install the required system C libraries, GTK3, WebKit2GTK 4.1, and `pkg-config` using your distribution's package manager:
@@ -244,7 +242,6 @@ Required for building Android debug/release APKs and Google Play `.aab` bundles:
    rustup target add aarch64-linux-android
    rustup target add armv7-linux-androideabi
    rustup target add x86_64-linux-android
-   rustup target add i686-linux-android
    ```
 
 ---
@@ -376,21 +373,19 @@ Builds 16 KB page-size aligned `.so` libraries specifically for Android (`arm64-
 npm run mobile:build-engine:android:release
 ```
 
+#### Step B1: Build Android Release APKs (`.apk`)
 
-#### Step B1: Build Android Release APK (`.apk`)
-
-Generates an installable `.apk` file:
+Generates the finalized 3 production APKs (`arm64-v8a`, `armeabi-v7a`, and `universal`):
 
 ```bash
 npm run mobile:build:apk-release
 ```
 
-- **Output location**: `apps/mobile/android/app/build/outputs/apk/release/app-release.apk`
-- _(Optional)_ To build a debug APK for quick sideloading:
-  ```bash
-  npm run mobile:build:apk-debug
-  # Output: apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
-  ```
+- **Output locations**:
+  - `DocChisel-<version>-arm64-v8a-release.apk` (modern 64-bit ARM devices)
+  - `DocChisel-<version>-armeabi-v7a-release.apk` (legacy 32-bit ARM devices)
+  - `DocChisel-<version>-universal-release.apk` (all architectures included)
+- _Note_: 32-bit x86 (`i686`) is dropped completely, and standalone `x86_64` split APKs are omitted to prevent download confusion.
 
 #### Step B2: Build Android App Bundle (`.aab` for Google Play Store)
 
@@ -400,7 +395,7 @@ Generates the optimized `.aab` distribution package for Google Play Console:
 npm run mobile:build:bundle
 ```
 
-- **Output location**: `apps/mobile/android/app/build/outputs/bundle/release/app-release.aab`
+- **Output location**: `DocChisel-<version>-release.aab`
 
 > **Note on Production Signing**: The release build automatically checks for production upload credentials via environment variables:
 >
@@ -413,36 +408,35 @@ npm run mobile:build:bundle
 >
 > If these variables are not provided, Gradle falls back seamlessly to `debug.keystore` for frictionless local developer testing and CI evaluation.
 >
-> **ABI Splits & Universal APKs**:
-> Production builds generate per-architecture APKs (`app-arm64-v8a-release.apk`, `app-armeabi-v7a-release.apk`, `app-x86_64-release.apk`) alongside a universal APK (`app-universal-release.apk`) to guarantee the smallest possible download size for end users. The `.aab` bundle contains all architectures and 16 KB page-size aligned ELF binaries for Google Play Store distribution.
+> **Lean ABI Splits & Universal APKs**:
+> Production builds generate exactly 2 ABI splits (`arm64-v8a`, `armeabi-v7a`) alongside a `universal` APK (containing `arm64-v8a`, `armeabi-v7a`, and `x86_64`) to guarantee the smallest possible download size for direct distribution. The Google Play `.aab` bundle packages all architectures with 16 KB page-size aligned ELF binaries.
 
 ---
 
-### 2. macOS Desktop Builds (DMG & .app)
+### 2. macOS Desktop Builds (DMG)
 
 _(Run on macOS)_
 
-#### Build for Current Host Architecture:
-
-```bash
-npm run desktop:package:mac
-```
-
-- **Output location**:
-  - DMG Installer: `target/release/bundle/dmg/DocChisel_0.1.0_aarch64.dmg` (or `x86_64`)
-  - App Bundle: `target/release/bundle/macos/DocChisel.app`
-
-#### Build Universal macOS Binary (Apple Silicon + Intel):
+#### Build Universal macOS DMG (Apple Silicon + Intel) — Primary Release:
 
 ```bash
 npm run desktop:package:mac-universal
 ```
 
-- **Output location**: `target/universal-apple-darwin/release/bundle/dmg/*.dmg`s
+- **Output location**: `target/universal-apple-darwin/release/bundle/dmg/DocChisel_<version>_universal.dmg`
+- _Note_: Loose `.app` folders are not distributed in `releases/macos/` because `DocChisel.app` is already packaged inside the `.dmg` installer.
+
+#### Build for Current Host Architecture (Fast Local Testing):
+
+```bash
+npm run desktop:package:mac
+```
+
+- **Output location**: `target/release/bundle/dmg/DocChisel_<version>_aarch64.dmg` (or `x86_64.dmg`)
 
 ---
 
-### 3. Windows Desktop Builds (MSI & .exe)
+### 3. Windows Desktop Builds (NSIS Setup .exe)
 
 _(Run on Windows with Visual Studio C++ Build Tools installed)_
 
@@ -450,13 +444,12 @@ _(Run on Windows with Visual Studio C++ Build Tools installed)_
 npm run desktop:package:windows
 ```
 
-- **Output location**:
-  - Windows MSI Installer: `target/release/bundle/msi/DocChisel_0.1.0_x64_en-US.msi`
-  - NSIS Setup Executable: `target/release/bundle/nsis/DocChisel_0.1.0_x64-setup.exe`
+- **Output location**: `target/release/bundle/nsis/DocChisel_<version>_x64-setup.exe`
+- _Note_: WiX Toolset and `.msi` installers are completely removed in favor of the lightweight NSIS setup executable.
 
 ---
 
-### 4. Linux Desktop Builds (DEB, AppImage & RPM)
+### 4. Linux Desktop Builds (DEB and AppImage)
 
 _(Run on Linux or in a Linux container/VM with Tauri dependencies installed)_
 
@@ -467,10 +460,11 @@ npm run desktop:package:linux
 ```
 
 - **Output locations**:
-  - Debian Package: `target/release/bundle/deb/DocChisel_0.1.0_amd64.deb` (or `arm64`)
-  - AppImage: `target/release/bundle/appimage/DocChisel_0.1.0_amd64.AppImage`
+  - Debian Package: `target/release/bundle/deb/DocChisel_<version>_amd64.deb`
+  - AppImage: `target/release/bundle/appimage/DocChisel_<version>_amd64.AppImage`
+- _Note_: Red Hat `.rpm` packaging has been dropped to maintain a lean packaging matrix.
 
-#### Build Specific Linux Package Formats:
+#### Build Specific Linux Formats:
 
 ```bash
 # Build Debian (.deb) package only
@@ -478,24 +472,21 @@ npm run desktop:package:linux:deb
 
 # Build standalone AppImage only
 npm run desktop:package:linux:appimage
-
-# Build Red Hat (.rpm) package (requires rpm-build or rpmbuild installed)
-npm run desktop:package:linux:rpm
 ```
 
 #### Running & Installing on Linux:
 
 - **Standalone AppImage**:
   ```bash
-  chmod +x target/release/bundle/appimage/DocChisel_*.AppImage
-  ./target/release/bundle/appimage/DocChisel_*.AppImage
+  chmod +x DocChisel_*_amd64.AppImage
+  ./DocChisel_*_amd64.AppImage
   ```
 - **Debian / Ubuntu Package**:
   ```bash
   # Install directly with apt to resolve any system dependencies automatically:
-  sudo apt install ./target/release/bundle/deb/DocChisel_*_amd64.deb
+  sudo apt install ./DocChisel_*_amd64.deb
   # Or via dpkg:
-  sudo dpkg -i target/release/bundle/deb/DocChisel_*_amd64.deb
+  sudo dpkg -i DocChisel_*_amd64.deb
   ```
 
 ---
@@ -566,20 +557,17 @@ npm run package:artifacts
    ```
    releases/
    ├── android/
-   │   ├── app-release.apk
-   │   ├── app-release.aab
-   │   └── app-debug.apk
+   │   ├── DocChisel-<version>-arm64-v8a-release.apk
+   │   ├── DocChisel-<version>-armeabi-v7a-release.apk
+   │   ├── DocChisel-<version>-universal-release.apk
+   │   └── DocChisel-<version>-release.aab
    ├── macos/
-   │   ├── DocChisel_0.1.0_aarch64.dmg
-   │   └── DocChisel.app
+   │   └── DocChisel_<version>_universal.dmg
    ├── windows/
-   │   ├── DocChisel_0.1.0_x64-setup.exe
-   │   └── DocChisel_0.1.0_x64_en-US.msi
-   ├── linux/
-   │   ├── DocChisel_0.1.0_amd64.deb
-   │   └── DocChisel_0.1.0_amd64.AppImage
-   └── ios/
-       └── DocChisel.ipa
+   │   └── DocChisel_<version>_x64-setup.exe
+   └── linux/
+       ├── DocChisel_<version>_amd64.deb
+       └── DocChisel_<version>_amd64.AppImage
    ```
 3. Prints a clean file manifest showing the filename and byte size of every collected artifact.
 4. The `releases/` directory is automatically ignored by Git to prevent accidentally committing large binary blobs.
@@ -593,20 +581,18 @@ The following root npm scripts provide dedicated, platform-specific commands to 
 | Command                                 | Action                                               | Output / Purpose                   |
 | :-------------------------------------- | :--------------------------------------------------- | :--------------------------------- |
 | **Desktop Builds**                      |                                                      |                                    |
-| `npm run desktop:package:mac`           | Builds macOS DMG & App bundle                        | `target/.../bundle/macos/`         |
-| `npm run desktop:package:mac-universal` | Builds Universal macOS DMG & App bundle              | `target/.../bundle/macos/`         |
-| `npm run desktop:package:windows`       | Builds Windows MSI & EXE installer                   | `target/.../bundle/msi/` & `nsis/` |
+| `npm run desktop:package:mac-universal` | Builds Universal macOS DMG installer                 | `target/universal-apple-darwin/.../dmg/` |
+| `npm run desktop:package:mac`           | Builds Host macOS DMG installer                      | `target/.../bundle/dmg/`           |
+| `npm run desktop:package:windows`       | Builds Windows NSIS EXE installer                    | `target/.../bundle/nsis/`          |
 | `npm run desktop:package:linux`         | Builds Linux DEB & AppImage release packages         | `target/.../bundle/deb/` & `appimage/` |
-| `npm run desktop:package:linux:debug`   | Builds Linux unstripped debug packages               | `target/.../bundle/deb/` & `appimage/` |
 | `npm run desktop:package:linux:deb`     | Builds Linux Debian package (.deb)                   | `target/.../bundle/deb/`           |
 | `npm run desktop:package:linux:appimage`| Builds Linux standalone AppImage                     | `target/.../bundle/appimage/`      |
-| `npm run desktop:package:linux:rpm`     | Builds Linux Red Hat RPM package                     | `target/.../bundle/rpm/`           |
-| `npm run desktop:package:all`           | Builds host desktop release bundles                  | Desktop release bundles            |
+| `npm run desktop:package:all`           | Builds desktop release bundles                       | Desktop release bundles            |
 | `npm run desktop:test`                  | Runs Desktop Tauri backend unit test suite           | Rust test runner                   |
 | **Mobile Builds**                       |                                                      |                                    |
-| `npm run mobile:build:apk-debug`        | Compiles Android debug APK                           | `apps/mobile/.../apk/debug/`       |
-| `npm run mobile:build:apk-release`      | Compiles multi-architecture Android release APK      | `apps/mobile/.../apk/release/`     |
+| `npm run mobile:build:apk-release`      | Compiles 3 release APKs (arm64, armv7, universal)    | `apps/mobile/.../apk/release/`     |
 | `npm run mobile:build:bundle`           | Compiles Android Google Play release `.aab`          | `apps/mobile/.../bundle/`          |
+| `npm run mobile:build:apk-debug`        | Compiles Android debug APK                           | `apps/mobile/.../apk/debug/`       |
 | `npm run mobile:ios:release`            | (Untested) Compiles iOS release configuration        | `apps/mobile/ios/build/`           |
 | **Artifact Collection**                 |                                                      |                                    |
 | `npm run package:artifacts`             | Gathers all built binaries into unified `releases/`  | `releases/<platform>/`             |

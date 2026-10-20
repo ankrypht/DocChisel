@@ -129,8 +129,8 @@ android {
         abi {
             reset()
             enable enableAbiSplits
+            include "arm64-v8a", "armeabi-v7a"
             universalApk enableAbiSplits
-            include "armeabi-v7a", "arm64-v8a", "x86", "x86_64"
         }
     }
 

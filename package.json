@@ -20,7 +20,6 @@
     "desktop:package:linux:debug": "npm run --workspace=@docchisel/desktop build:linux:debug",
     "desktop:package:linux:deb": "npm run --workspace=@docchisel/desktop build:linux:deb",
     "desktop:package:linux:appimage": "npm run --workspace=@docchisel/desktop build:linux:appimage",
-    "desktop:package:linux:rpm": "npm run --workspace=@docchisel/desktop build:linux:rpm",
     "desktop:package:all": "npm run desktop:package:mac && npm run desktop:package:windows",
     "desktop:test": "cargo test --package DocChisel",
     "desktop:clean": "npm run --workspace=@docchisel/desktop clean",

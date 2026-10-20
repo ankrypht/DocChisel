@@ -80,7 +80,6 @@ if (shouldBuildAndroid) {
       CARGO_TARGET_AARCH64_LINUX_ANDROID_RUSTFLAGS: '-C link-arg=-Wl,-z,max-page-size=16384',
       CARGO_TARGET_ARMV7_LINUX_ANDROIDEABI_RUSTFLAGS: '-C link-arg=-Wl,-z,max-page-size=16384',
       CARGO_TARGET_X86_64_LINUX_ANDROID_RUSTFLAGS: '-C link-arg=-Wl,-z,max-page-size=16384',
-      CARGO_TARGET_I686_LINUX_ANDROID_RUSTFLAGS: '-C link-arg=-Wl,-z,max-page-size=16384',
     };
 
     if (customTarget) {
