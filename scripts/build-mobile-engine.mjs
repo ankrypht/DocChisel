@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { spawnSync } from 'node:child_process';
+import { spawnSync, execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -35,10 +35,11 @@ const shouldBuildAndroid = isAndroidOnly || isAll;
 
 console.log('==================================================');
 console.log(`==> [DocChisel] Building Core Engine for Mobile (${isRelease ? 'Release' : 'Dev'})`);
-if (isAndroidOnly) console.log('==> Platform Filter: Android only');
-if (isIosOnly) console.log('==> Platform Filter: iOS only (Untested)');
-if (isAll) console.log('==> Platform Filter: Android + iOS (All)');
-if (customTarget) console.log(`==> Specific Target ABI: ${customTarget}`);
+console.log(`   Host Platform:   ${process.platform} (${process.arch})`);
+if (isAndroidOnly) console.log('   Platform Filter: Android only');
+if (isIosOnly) console.log('   Platform Filter: iOS only (Untested)');
+if (isAll) console.log('   Platform Filter: Android + iOS (All)');
+if (customTarget) console.log(`   Specific Target: ${customTarget}`);
 console.log('==================================================');
 
 const androidJniLibs = path.join(
@@ -71,10 +72,65 @@ function hasCommand(cmd) {
   return res.status === 0;
 }
 
-// 1. Build Android shared libraries (.so) via cargo-ndk
+// ----------------------------------------------------
+// 1. Build Android Shared Libraries (.so) via cargo-ndk
+// ----------------------------------------------------
 if (shouldBuildAndroid) {
-  if (hasCommand('cargo-ndk')) {
+  // Auto-detect ANDROID_HOME if not already set
+  if (!process.env.ANDROID_HOME && !process.env.ANDROID_SDK_ROOT) {
+    const candidateSdkPaths = [];
+    if (process.platform === 'win32') {
+      if (process.env.LOCALAPPDATA) candidateSdkPaths.push(path.join(process.env.LOCALAPPDATA, 'Android/Sdk'));
+      candidateSdkPaths.push('C:\\Android\\Sdk');
+    } else if (process.platform === 'darwin') {
+      if (process.env.HOME) candidateSdkPaths.push(path.join(process.env.HOME, 'Library/Android/sdk'));
+    } else {
+      if (process.env.HOME) {
+        candidateSdkPaths.push(path.join(process.env.HOME, 'Android/Sdk'));
+        candidateSdkPaths.push(path.join(process.env.HOME, '.android/sdk'));
+      }
+      candidateSdkPaths.push('/opt/android-sdk');
+    }
+    for (const cand of candidateSdkPaths) {
+      if (fs.existsSync(cand)) {
+        process.env.ANDROID_HOME = cand;
+        process.env.ANDROID_SDK_ROOT = cand;
+        console.log(`  ✓ Auto-detected Android SDK: ${cand}`);
+        break;
+      }
+    }
+  }
+
+  // Check for cargo-ndk
+  let hasCargoNdk = hasCommand('cargo-ndk');
+  if (!hasCargoNdk) {
+    try {
+      execSync('cargo ndk --version', { stdio: 'ignore' });
+      hasCargoNdk = true;
+    } catch {}
+  }
+
+  if (hasCargoNdk) {
     console.log('==> Compiling for Android via cargo-ndk (16 KB page-size aligned)...');
+
+    // Auto-verify and add required Rust targets
+    try {
+      const installed = execSync('rustup target list --installed', { encoding: 'utf8' });
+      const requiredTargets = customTarget
+        ? [customTarget]
+        : (isRelease
+            ? ['aarch64-linux-android', 'armv7-linux-androideabi', 'x86_64-linux-android']
+            : ['aarch64-linux-android']);
+      for (const t of requiredTargets) {
+        if (!installed.includes(t)) {
+          console.log(`  ℹ️ Adding missing rustup target: ${t}...`);
+          execSync(`rustup target add ${t}`, { stdio: 'inherit' });
+        }
+      }
+    } catch (err) {
+      console.warn(`  ⚠️ Could not verify Android rustup targets: ${err.message}`);
+    }
+
     const env = {
       ...process.env,
       CARGO_TARGET_AARCH64_LINUX_ANDROID_RUSTFLAGS: '-C link-arg=-Wl,-z,max-page-size=16384',
@@ -82,21 +138,22 @@ if (shouldBuildAndroid) {
       CARGO_TARGET_X86_64_LINUX_ANDROID_RUSTFLAGS: '-C link-arg=-Wl,-z,max-page-size=16384',
     };
 
+    let androidBuildOk = false;
     if (customTarget) {
       console.log(`==> Targeted Android Build: [${customTarget}]`);
       const targetArgs = ['ndk', '-t', customTarget, '-o', androidJniLibs, 'build'];
       if (isRelease) targetArgs.push('--release');
       targetArgs.push('--package', 'core_engine');
-      const ok = runCommand('cargo', targetArgs, { env });
-      if (ok) console.log(`✓ Android .so built for ${customTarget} in ${androidJniLibs}`);
+      androidBuildOk = runCommand('cargo', targetArgs, { env });
+      if (androidBuildOk) console.log(`✓ Android .so built for ${customTarget} in ${androidJniLibs}`);
     } else if (isRelease) {
       console.log('==> Android Targets: [arm64-v8a, armeabi-v7a, x86_64]');
-      const ok = runCommand(
+      androidBuildOk = runCommand(
         'cargo',
         ['ndk', '-t', 'arm64-v8a', '-t', 'armeabi-v7a', '-t', 'x86_64', '-o', androidJniLibs, 'build', '--release', '--package', 'core_engine'],
         { env }
       );
-      if (ok) console.log(`✓ Multi-target Android .so libraries built in ${androidJniLibs}`);
+      if (androidBuildOk) console.log(`✓ Multi-target Android .so libraries built in ${androidJniLibs}`);
     } else {
       // Clean stale non-dev architectures
       for (const stale of ['armeabi-v7a', 'x86_64', 'x86']) {
@@ -104,21 +161,34 @@ if (shouldBuildAndroid) {
         if (fs.existsSync(p)) fs.rmSync(p, { recursive: true, force: true });
       }
       console.log('==> Fast dev Android Target: [arm64-v8a only]');
-      const ok = runCommand(
+      androidBuildOk = runCommand(
         'cargo',
         ['ndk', '-t', 'arm64-v8a', '-o', androidJniLibs, 'build', '--package', 'core_engine'],
         { env }
       );
-      if (ok) console.log(`✓ Fast local dev arm64-v8a .so built in ${androidJniLibs}`);
+      if (androidBuildOk) console.log(`✓ Fast local dev arm64-v8a .so built in ${androidJniLibs}`);
+    }
+
+    if (!androidBuildOk) {
+      console.error('\n❌ Android native compilation failed.');
+      if (isAndroidOnly) process.exit(1);
     }
   } else {
-    console.log('ℹ️ cargo-ndk not found in PATH. Skipping Android native compilation.');
+    console.error('\n❌ Error: cargo-ndk not found in PATH.');
+    console.error('   cargo-ndk is required to compile Rust core_engine for Android.');
+    console.error('   Install via Cargo: cargo install cargo-ndk');
+    console.error('   Also ensure Android NDK and SDK are configured, and ANDROID_HOME is set.');
+    if (isAndroidOnly) {
+      process.exit(1);
+    }
   }
 } else {
   console.log('ℹ️ Skipping Android build (--ios specified).');
 }
 
-// 2. Build iOS static library (.a) - only when explicitly targeted
+// ----------------------------------------------------
+// 2. Build iOS Static Library (.a) - macOS Exclusive
+// ----------------------------------------------------
 if (shouldBuildIos) {
   if (process.platform === 'darwin') {
     console.log('==> Compiling for iOS targets...');
@@ -147,7 +217,12 @@ if (shouldBuildIos) {
       }
     }
   } else {
-    console.log('ℹ️ Skipping iOS build (requires macOS and Xcode).');
+    if (isIosOnly) {
+      console.error('❌ Error: iOS native libraries can only be compiled on macOS with Xcode.');
+      process.exit(1);
+    } else {
+      console.log('ℹ️ Skipping iOS build (iOS requires macOS and Xcode).');
+    }
   }
 } else {
   console.log('ℹ️ Skipping iOS native build (iOS is optional & untested; use --ios or --all to compile iOS).');
@@ -161,41 +236,47 @@ if (shouldBuildIos) {
   }
 }
 
+// ----------------------------------------------------
 // 3. Generate UniFFI Bindings for Kotlin (and Swift if iOS enabled)
+// ----------------------------------------------------
 console.log('==> Generating UniFFI Bindings...');
 
-let dylibName = 'libcore_engine.dylib';
+const dylibCandidates = [];
 if (process.platform === 'win32') {
-  dylibName = 'core_engine.dll';
+  dylibCandidates.push('core_engine.dll', 'libcore_engine.dll');
 } else if (process.platform === 'linux') {
-  dylibName = 'libcore_engine.so';
+  dylibCandidates.push('libcore_engine.so');
+} else {
+  dylibCandidates.push('libcore_engine.dylib');
 }
 
-// Check if a pre-existing host library exists in release or debug
-let dylibPath = isRelease
-  ? path.join(REPO_ROOT, 'target/release', dylibName)
-  : path.join(REPO_ROOT, 'target/debug', dylibName);
+function findHostDylib() {
+  const dirs = isRelease
+    ? [path.join(REPO_ROOT, 'target/release'), path.join(REPO_ROOT, 'target/debug')]
+    : [path.join(REPO_ROOT, 'target/debug'), path.join(REPO_ROOT, 'target/release')];
 
-if (!fs.existsSync(dylibPath)) {
-  const fallbackPath = isRelease
-    ? path.join(REPO_ROOT, 'target/debug', dylibName)
-    : path.join(REPO_ROOT, 'target/release', dylibName);
-  if (fs.existsSync(fallbackPath)) {
-    dylibPath = fallbackPath;
+  for (const d of dirs) {
+    for (const name of dylibCandidates) {
+      const full = path.join(d, name);
+      if (fs.existsSync(full)) return full;
+    }
   }
+  return null;
 }
 
-if (!fs.existsSync(dylibPath)) {
+let dylibPath = findHostDylib();
+
+if (!dylibPath) {
   console.log('==> Compiling host library for UniFFI schema extraction...');
   const hostArgs = ['build', '--package', 'core_engine'];
   if (isRelease) hostArgs.push('--release');
   runCommand('cargo', hostArgs);
-  dylibPath = path.join(REPO_ROOT, isRelease ? 'target/release' : 'target/debug', dylibName);
+  dylibPath = findHostDylib();
 }
 
-if (fs.existsSync(dylibPath)) {
+if (dylibPath && fs.existsSync(dylibPath)) {
   const languages = ['kotlin'];
-  if (shouldBuildIos) {
+  if (shouldBuildIos && process.platform === 'darwin') {
     languages.push('swift');
   }
 
@@ -239,7 +320,7 @@ if (fs.existsSync(dylibPath)) {
   }
 
   // 2. If iOS is enabled, copy Swift bindings to iOS module
-  if (shouldBuildIos) {
+  if (shouldBuildIos && process.platform === 'darwin') {
     const generated = fs.readdirSync(stagingDir);
     for (const f of generated) {
       if (f.endsWith('.swift') || f.endsWith('.h') || f.endsWith('.modulemap')) {
@@ -255,7 +336,9 @@ if (fs.existsSync(dylibPath)) {
   } catch {}
 }
 
-// 4. Auto-prune disposable intermediate scratch caches if requested
+// ----------------------------------------------------
+// 4. Auto-prune Intermediate Scratch Caches If Requested
+// ----------------------------------------------------
 if (shouldPrune) {
   const pruneScript = path.join(REPO_ROOT, 'scripts/prune-intermediates.mjs');
   if (fs.existsSync(pruneScript)) {

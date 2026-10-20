@@ -30,6 +30,23 @@
 
 ---
 
+## 🌐 Compatibility & Exclusivity Matrix (Native Host Builds Only)
+
+DocChisel is engineered to run and build natively on developer machines without requiring virtual machines, Docker containers, or cloud CI pipelines:
+
+| Target Platform | Final Package Format | macOS Host | Windows Host | Linux Host | Pipeline & Exclusivity Notes |
+| :--- | :--- | :---: | :---: | :---: | :--- |
+| **Android** | 3 APKs + 1 AAB | ✅ **Yes** | ✅ **Yes** | ✅ **Yes** | **Native on all 3 hosts** via Android SDK, NDK, and `cargo-ndk`. |
+| **Windows** | NSIS Setup `.exe` | ✅ **Yes** | ✅ **Yes** | ✅ **Yes** | **Native on Windows** (MSVC + NSIS); **Cross-compiled on macOS & Linux** via `cargo-xwin` + `makensis` + LLVM/LLD. |
+| **macOS** | Universal `.dmg` | ✅ **Yes** | ❌ **No** | ❌ **No** | **macOS Exclusive**. Requires Apple Cocoa frameworks, codesigning, and `hdiutil` DMG creation. |
+| **Linux** | `.deb` + `.AppImage` | ❌ **No** | ❌ **No** | ✅ **Yes** | **Linux Exclusive**. Requires GTK3 & WebKit2GTK 4.1 C libraries and dynamic linkers. |
+| **iOS** | `.ipa` / Simulator | ✅ **Yes** | ❌ **No** | ❌ **No** | **macOS Exclusive**. Requires Xcode and iOS SDKs (untested/unreleased). |
+
+> [!NOTE]
+> All build, mobile engine generation, cleanup, and artifact packaging scripts in `scripts/` are written in native Node.js (`.mjs`) and execute seamlessly across Windows (PowerShell / CMD), macOS, and Linux without shell dependencies (`rm -rf`, `./gradlew`, `&&` chaining).
+
+---
+
 ## 📁 Monorepo Structure
 
 ```
@@ -43,125 +60,170 @@ DocChisel/
 │   └── core_engine/      # Pure Rust engine compiled for desktop and mobile targets
 ├── packages/
 │   └── shared/           # Shared TypeScript types, schemas, and tool catalog definitions
-└── scripts/              # Build, mobile engine, brand icon generation, and cleanup utilities
+├── scripts/              # Build, mobile engine, brand icon generation, and cleanup utilities
+└── releases/             # Unified collection folder for all finalized release binaries
 ```
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Getting Started (From the Very First)
 
 > [!TIP]
-> **Complete Build, Test & Packaging Guide**: See [INSTRUCTIONS.md](INSTRUCTIONS.md) for step-by-step setup, hot-reload dev servers, building Android APKs & Google Play `.aab`, macOS Universal DMG, Windows NSIS Setup `.exe`, Linux DEB & AppImage, and exporting all release binaries to the unified `releases/` directory.
+> **Complete In-Depth Guide**: See [INSTRUCTIONS.md](INSTRUCTIONS.md) for detailed per-OS dependency installation guides, environment variable setups, device debugging, and release packaging instructions.
 
-### Prerequisites
+### Step 1: Install Common Tools
 
-- [Node.js](https://nodejs.org/) (v20+)
-- [Rust](https://rustup.rs/) (v1.75+)
-- For Desktop builds: [Tauri Prerequisites](https://v2.tauri.app/start/prerequisites/)
-  - **Linux (Ubuntu/Debian)**:
-    ```bash
-    sudo apt update && sudo apt install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev pkg-config
-    ```
-  - **Linux (Fedora)**:
-    ```bash
-    sudo dnf install webkit2gtk4.1-devel openssl-devel curl wget file libappindicator-gtk3-devel librsvg2-devel libxdo-devel && sudo dnf group install "c-development"
-    ```
-  - **Linux (Arch Linux)**:
-    ```bash
-    sudo pacman -S --needed webkit2gtk-4.1 base-devel curl wget file openssl appmenu-gtk-module libappindicator-gtk3 librsvg xdotool
-    ```
-  - **macOS**: Xcode Command Line Tools (`xcode-select --install`)
-  - **Windows (Native)**: Visual Studio 2022 C++ Build Tools (Desktop development with C++) and WebView2
-  - **Windows Cross-Compilation on macOS / Linux**:
-    - macOS: `brew install makensis llvm lld`
-    - Linux: `sudo apt install -y nsis llvm lld`
-    - Runner & Target: `cargo install cargo-xwin` and `rustup target add x86_64-pc-windows-msvc`
-- For Mobile builds: Android Studio, Android SDK / NDK, and [cargo-ndk](https://github.com/bbqsrc/cargo-ndk) (for Android NDK compilation). Xcode is optional and only required if building for iOS in the future.
+1. **Node.js**: Install Node.js LTS `v20+` (or `v24+`) from [nodejs.org](https://nodejs.org/).
+2. **Rust**: Install Rust via [rustup.rs](https://rustup.rs/).
 
-> [!NOTE]
-> All build, mobile engine generation, cleanup, and artifact packaging scripts in `scripts/` are written in native Node.js (`.mjs`) and execute seamlessly across Windows (PowerShell / CMD), macOS, and Linux without requiring WSL or Git Bash.
+```bash
+# Verify installations in your terminal
+node -v
+npm -v
+rustc --version
+cargo --version
+```
 
-### Installation
+### Step 2: Clone & Verify Workspace
 
 ```bash
 # Clone the repository
 git clone https://github.com/ankrypht/DocChisel.git
 cd DocChisel
 
-# Install dependencies across all workspaces
+# Install dependencies across all monorepo workspaces
 npm install
+
+# Run TypeScript checks and verify all 12 Rust core engine tests
+npm run check:all
 ```
 
-### Running the Desktop App
+---
 
+## 🧰 Development Host Setup (Download by Host OS)
+
+### 1. macOS Development Host
+- **Xcode Command Line Tools**: `xcode-select --install`
+- **For Android Development**: Install [Android Studio](https://developer.android.com/studio) with SDK Platforms (API 34/35), Android SDK Build-Tools, NDK (`v26.x`/`v27.x`), and install `cargo-ndk`:
+  ```bash
+  cargo install cargo-ndk
+  rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android
+  ```
+- **(Optional) For Windows Cross-Compilation on macOS**:
+  ```bash
+  brew install makensis llvm lld
+  cargo install cargo-xwin
+  rustup target add x86_64-pc-windows-msvc
+  ```
+
+### 2. Windows Development Host
+- **C++ Build Tools**: Install [Visual Studio 2022 Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) and select the *"Desktop development with C++"* workload.
+- **WebView2**: Included by default in Windows 10/11; otherwise install [Evergreen WebView2](https://developer.microsoft.com/en-us/microsoft-edge/webview2/).
+- **NSIS 3.x**: Install via `winget install NSIS.NSIS` or download from [SourceForge](https://nsis.sourceforge.io/).
+- **For Android Development**: Install [Android Studio](https://developer.android.com/studio) with SDK Platforms (API 34/35), NDK (`v26.x`/`v27.x`), and install `cargo-ndk`:
+  ```bash
+  cargo install cargo-ndk
+  rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android
+  ```
+
+### 3. Linux Development Host (Ubuntu/Debian, Fedora, Arch)
+- **WebKit2GTK & Desktop Libraries**:
+  - **Ubuntu / Debian**:
+    ```bash
+    sudo apt update && sudo apt install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev pkg-config libfuse2
+    ```
+  - **Fedora**:
+    ```bash
+    sudo dnf install -y webkit2gtk4.1-devel openssl-devel libappindicator-gtk3-devel librsvg2-devel libxdo-devel pkg-config && sudo dnf group install -y "c-development"
+    ```
+  - **Arch Linux**:
+    ```bash
+    sudo pacman -S --needed webkit2gtk-4.1 base-devel curl wget file openssl appmenu-gtk-module libappindicator-gtk3 librsvg xdotool pkgconf
+    ```
+- **For Android Development**: Install [Android Studio for Linux](https://developer.android.com/studio), configure `ANDROID_HOME`, and install `cargo-ndk`:
+  ```bash
+  cargo install cargo-ndk
+  rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android
+  ```
+- **(Optional) For Windows Cross-Compilation on Linux**:
+  ```bash
+  sudo apt install -y nsis llvm lld
+  cargo install cargo-xwin
+  rustup target add x86_64-pc-windows-msvc
+  ```
+
+---
+
+## ⚡ Running the Applications (Development)
+
+### Desktop App (macOS, Windows, or Linux)
 ```bash
-# Start Tauri desktop app with hot-reload (macOS, Windows, or Linux)
+# Launch Tauri desktop application with hot-reload
 npm run desktop:dev
 
-# Or run frontend-only preview in browser
+# Or run frontend-only preview in browser (http://localhost:1420)
 npm run desktop:dev:web
 ```
 
-### Packaging Apps for Production
-
-1. **Build for your target platform**:
-   ```bash
-   # macOS: Build Universal DMG (Apple Silicon + Intel)
-   npm run desktop:package:mac-universal
-   # or for host-architecture testing: npm run desktop:package:mac
-
-   # Windows: Build NSIS Setup (.exe) installer (natively on Windows, or cross-compiled on macOS/Linux via cargo-xwin + makensis)
-   npm run desktop:package:windows
-
-   # Linux: Build Debian (.deb) package and standalone AppImage
-   npm run desktop:package:linux
-
-   # Android: Build 3 release APKs (arm64, armv7, universal) & Google Play .aab
-   npm run mobile:build:apk-release
-   npm run mobile:build:bundle
-   ```
-
-2. **Collect all binaries into the unified `releases/` folder**:
-   ```bash
-   npm run package:artifacts
-   ```
-
-### Running the Mobile App
-
-> [!NOTE]
-> **iOS Status (Untested / Deferred)**: DocChisel mobile is actively developed, tested, and targeted for **Android**. The mobile codebase and UniFFI Swift bridge architecture retain full iOS readiness for future releases, but iOS builds are currently **untested** and unreleased pending Apple Developer App Store account registration. All default mobile scripts build exclusively for Android to prevent unnecessary compilation cycles and disk space consumption.
-
+### Android App (macOS, Windows, or Linux)
 ```bash
-# Build the native Rust engine for Android development (arm64-v8a fast dev)
+# Step 1: Build the native Rust engine for local Android dev (fast arm64-v8a compilation)
 npm run mobile:build-engine:android
 
-# Start the Expo development server
+# Step 2: Start Expo Metro server
 npm run mobile:start
 
-# Launch directly on Android emulator or connected device
+# Step 3: Run directly on Android emulator or connected device
 npm run mobile:android
-
-# (Optional / Untested) To compile the native engine and launch on iOS in the future:
-# npm run mobile:build-engine:ios
-# npm run mobile:ios
-
-# Or build for all mobile platforms:
-# npm run mobile:build-engine:all
 ```
 
-### Running Tests
+### iOS App (macOS Exclusive — Optional & Untested)
+```bash
+# Compile native engine for iOS and run in iOS Simulator
+npm run mobile:build-engine:ios
+npm run mobile:ios
+```
+
+---
+
+## 📦 Packaging Apps for Production
+
+Run the command corresponding to your target platform. All scripts automatically check host compatibility safeguards:
 
 ```bash
-# Run Rust core engine tests
-npm test
+# Android: Compiles multi-architecture engine, generates 3 release APKs & 1 Google Play .aab
+# (Supported on: macOS, Windows, Linux)
+npm run mobile:build:apk-release
+npm run mobile:build:bundle
 
-# Run TypeScript checks across all workspaces
-npm run typecheck
+# Windows: Compiles lean NSIS Setup .exe installer
+# (Supported on: Windows native, or cross-compiled on macOS / Linux via cargo-xwin + makensis)
+npm run desktop:package:windows
+
+# macOS: Compiles Universal DMG (Apple Silicon + Intel)
+# (Supported on: macOS ONLY - Exclusive)
+npm run desktop:package:mac-universal
+
+# Linux: Compiles Debian package (.deb) and standalone AppImage
+# (Supported on: Linux ONLY - Exclusive)
+npm run desktop:package:linux
+
+# All Supported Desktop Targets for your current host:
+npm run desktop:package:all
 ```
 
-### 🎨 Brand Assets & Icon Generation
+### 🎯 Collect All Final Binaries
+```bash
+# Automatically gathers all built binaries (.apk, .aab, .dmg, .exe, .deb, .AppImage)
+# into the clean unified releases/ folder at the repository root
+npm run package:artifacts
+```
 
-DocChisel maintains an SVG-first brand asset pipeline. Master vectors live in `assets/brand/*.svg`. To compile all cross-platform OS icons (macOS Retina `.icns`, Windows `.ico` and Square tiles, iOS 24-bit RGB PNGs, Android adaptive WebP density buckets, and splash screens):
+---
+
+## 🎨 Brand Assets & Icon Generation
+
+DocChisel uses an **SVG-first architecture** with vector masters in `assets/brand/`. To re-render high-DPI bitmaps, macOS `.icns`, Windows `.ico`, iOS 24-bit PNGs, and Android adaptive mipmaps across all platforms:
 
 ```bash
 npm run generate:icons
@@ -171,24 +233,25 @@ npm run generate:icons
 
 ## 🧹 Maintenance & Cleanup
 
-To purge intermediate build outputs, kill lingering background Gradle Java daemons, and manage disk space:
-
 ```bash
-# Instant safe prune: removes disposable intermediate scratchpads (.cxx, Android intermediates,
+# Instant prune: deletes intermediate build scratchpads (.cxx, Android intermediates,
 # Cargo incremental caches) without deleting built APKs, DMGs, or release binaries
 npm run prune
-# or: npm run clean:intermediates
 
 # Standard clean: terminates Gradle daemons, cleans Cargo target, Android, iOS & Expo caches
 npm run clean
 
-# Deep clean: also purges the releases/ directory
+# Deep clean: performs standard clean plus wipes releases/ folder
 npm run clean:deep
-```
 
+# Targeted cleans
+npm run desktop:clean
+npm run mobile:clean:android
+npm run mobile:clean:all
+```
 
 ---
 
 ## 📄 License
 
-Distributed under the Apache 2.0 License. See [LICENSE](LICENSE) for more information.
+Distributed under the **Apache 2.0 License**. See [LICENSE](LICENSE) for more information.

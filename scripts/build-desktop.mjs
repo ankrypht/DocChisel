@@ -66,10 +66,12 @@ function commandExists(cmd) {
 }
 
 function runTauriBuild(tauriArgs, env = process.env) {
-  console.log(`\n==> Executing: npx ${tauriArgs.join(' ')}\n`);
-  const res = spawnSync('npx', tauriArgs, {
+  const npxCmd = process.platform === 'win32' ? 'npx.cmd' : 'npx';
+  console.log(`\n==> Executing: ${npxCmd} ${tauriArgs.join(' ')}\n`);
+  const res = spawnSync(npxCmd, tauriArgs, {
     cwd: DESKTOP_DIR,
     stdio: 'inherit',
+    shell: process.platform === 'win32',
     env,
   });
   return res.status === 0;
@@ -238,7 +240,22 @@ if (isWindows || isAll) {
       const candidateDirs = [
         '/opt/homebrew/opt/llvm/bin',
         '/usr/local/opt/llvm/bin',
+        '/usr/bin',
+        '/usr/lib/llvm-19/bin',
+        '/usr/lib/llvm-18/bin',
+        '/usr/lib/llvm-17/bin',
+        '/usr/lib/llvm-16/bin',
+        '/usr/lib/llvm-15/bin',
+        '/usr/lib/llvm-14/bin',
       ];
+      try {
+        if (fs.existsSync('/usr/lib')) {
+          const llvmDirs = fs.readdirSync('/usr/lib').filter((d) => d.startsWith('llvm-'));
+          for (const d of llvmDirs) {
+            candidateDirs.push(path.join('/usr/lib', d, 'bin'));
+          }
+        }
+      } catch {}
       try {
         const brewPrefix = execSync('brew --prefix llvm 2>/dev/null', { encoding: 'utf8' }).trim();
         if (brewPrefix) candidateDirs.unshift(path.join(brewPrefix, 'bin'));
@@ -341,13 +358,9 @@ if (isLinux || (isAll && process.platform === 'linux')) {
     if (isAll) {
       console.log('  ⚠️ Skipping Linux build (Linux GUI packages require a Linux environment with WebKit2GTK).');
     } else {
-      console.error('❌ Error: Linux desktop packages (.deb / .AppImage) cannot be compiled directly on macOS/Windows.');
+      console.error('❌ Error: Linux desktop packages (.deb / .AppImage) can only be built natively on a Linux host.');
       console.error('   WebKit2GTK 4.1 and GTK3 are dynamic Linux system C libraries.');
-      console.error('\nTo build Linux packages:');
-      console.error('   1. Run natively on Ubuntu/Debian/Fedora/Arch, or');
-      console.error('   2. Build inside a Docker container, or');
-      console.error('   3. Run via Windows Subsystem for Linux (WSL2), or');
-      console.error('   4. Use GitHub Actions CI.');
+      console.error('\nTo build Linux packages, run natively on Linux (Ubuntu, Debian, Fedora, Arch Linux, etc.).');
       process.exit(1);
     }
   } else {

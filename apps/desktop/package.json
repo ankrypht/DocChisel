@@ -22,7 +22,7 @@
     "build:linux:deb": "node ../../scripts/build-desktop.mjs --linux-deb",
     "build:linux:appimage": "node ../../scripts/build-desktop.mjs --linux-appimage",
     "build:all": "node ../../scripts/build-desktop.mjs --all",
-    "clean": "node -e \"const fs = require('fs'); ['dist', 'node_modules/.vite', 'node_modules/.vite-temp', 'src-tauri/target'].forEach(p => fs.rmSync(p, { recursive: true, force: true }));\""
+    "clean": "node ../../scripts/clean.mjs --desktop"
   },
   "dependencies": {
     "@docchisel/shared": "*",
@@ -43,7 +43,6 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.2",
-    "autoprefixer": "^10.6.1",
     "esbuild": "^0.28.2",
     "postcss": "^8.5.30",
     "tailwindcss": "^4.3.3",
