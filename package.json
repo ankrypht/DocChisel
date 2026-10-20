@@ -40,6 +40,7 @@
     "clean:deep": "node scripts/clean.mjs --deep",
     "typecheck": "npm run --workspaces --if-present typecheck",
     "test": "npm run engine:test",
+    "generate:icons": "python3 scripts/generate-brand-assets.py",
     "check:all": "npm run typecheck && npm run engine:test"
   },
   "keywords": [

@@ -37,11 +37,13 @@ DocChisel/
 ├── apps/
 │   ├── desktop/          # Tauri v2 + React 19 + Tailwind CSS desktop app
 │   └── mobile/           # Expo React Native + NativeWind mobile app
+├── assets/
+│   └── brand/            # Master SVG brand vectors and source graphics
 ├── crates/
 │   └── core_engine/      # Pure Rust engine compiled for desktop and mobile targets
 ├── packages/
 │   └── shared/           # Shared TypeScript types, schemas, and tool catalog definitions
-└── scripts/              # Build, mobile engine generation, and cleanup utilities
+└── scripts/              # Build, mobile engine, brand icon generation, and cleanup utilities
 ```
 
 ---
@@ -100,6 +102,14 @@ npm test
 
 # Run TypeScript checks across all workspaces
 npm run typecheck
+```
+
+### 🎨 Brand Assets & Icon Generation
+
+DocChisel maintains an SVG-first brand asset pipeline. Master vectors live in `assets/brand/*.svg`. To compile all cross-platform OS icons (macOS Retina `.icns`, Windows `.ico` and Square tiles, iOS 24-bit RGB PNGs, Android adaptive WebP density buckets, and splash screens):
+
+```bash
+npm run generate:icons
 ```
 
 ---

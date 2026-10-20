@@ -30,9 +30,10 @@ This document provides a comprehensive, step-by-step guide for anyone cloning th
    - [macOS Desktop: DMG and .app](#2-macos-desktop-builds-dmg--app)
    - [Windows Desktop: MSI and Setup .exe](#3-windows-desktop-builds-msi--exe)
    - [iOS Mobile: Release Bundle](#4-ios-mobile-builds)
-6. [Unified Artifact Collection (`releases/`)](#-unified-artifact-collection-releases)
-7. [Convenience Scripts Cheat Sheet](#-convenience-scripts-cheat-sheet)
-8. [Troubleshooting & Maintenance](#-troubleshooting--maintenance)
+6. [Brand Assets & Icon Generation Pipeline](#-brand-assets--icon-generation-pipeline)
+7. [Unified Artifact Collection (`releases/`)](#-unified-artifact-collection-releases)
+8. [Convenience Scripts Cheat Sheet](#-convenience-scripts-cheat-sheet)
+9. [Troubleshooting & Maintenance](#-troubleshooting--maintenance)
 
 ---
 
@@ -45,11 +46,15 @@ DocChisel/
 ├── apps/
 │   ├── desktop/          # Tauri v2 + React 19 + Tailwind CSS (macOS, Windows, Linux)
 │   └── mobile/           # Expo React Native + NativeWind (Android & iOS)
+├── assets/
+│   └── brand/            # Master SVG brand vectors and source graphics
 ├── crates/
 │   └── core_engine/      # Pure Rust engine compiled for desktop and mobile FFI
 ├── packages/
 │   └── shared/           # Shared TypeScript types, schemas, and tool catalog definitions
 ├── scripts/
+│   ├── generate-brand-assets.py # Cross-platform icon compiler (macOS .icns, Win .ico, iOS, Android mipmaps)
+│   ├── render-svg-brand.mjs   # Vector Skia renderer translating SVGs to high-DPI bitmaps
 │   ├── build-mobile-engine.mjs# Cross-platform compiler for Rust core_engine to .so / .a and UniFFI bindings
 │   ├── collect-artifacts.mjs  # Cross-platform collector gathering binaries into /releases
 │   └── clean.mjs              # Cross-platform deep cleaner for build caches and temp files
@@ -384,6 +389,32 @@ open apps/mobile/ios/docchisel.xcworkspace
 
 ---
 
+## 🎨 Brand Assets & Icon Generation Pipeline
+
+DocChisel uses an **SVG-first architecture** for all brand identity and application launch graphics. Master vectors are stored in `assets/brand/` as pure mathematical curves:
+
+- `desktop-app-icon.svg`: Master square icon for macOS, Windows, Linux, and iOS (55% glyph coverage matching Apple HIG).
+- `adaptive-foreground.svg`: Android adaptive launcher foreground with transparent background (safe for 66% circular masks).
+- `adaptive-monochrome.svg`: Android 13+ Material You themed icon (flat white silhouette with transparency).
+- `splash-icon.svg`: Mobile launch splash screen logo.
+
+### Compiling Platform Assets
+
+To automatically rasterize all SVGs and generate the full set of binary and bitmap targets across all operating systems:
+
+```bash
+npm run generate:icons
+```
+
+In ~2 seconds, this command automatically:
+1. Rasterizes all SVGs to crisp high-DPI bitmaps using Skia (`@napi-rs/canvas`).
+2. Generates desktop [icon.icns](apps/desktop/src-tauri/icons/icon.icns) (Retina macOS bundle) and [icon.ico](apps/desktop/src-tauri/icons/icon.ico) (Win32 multi-resolution container).
+3. Generates all Windows Store modern tiles (`Square44x44`, `Square150x150`, `Square310x310`, `StoreLogo`).
+4. Generates iOS 24-bit RGB icons (strictly 0% alpha for Apple App Store compliance).
+5. Generates all Android density mipmaps (`ic_launcher.webp`, `ic_launcher_round.webp`, `ic_launcher_foreground.webp`, `ic_launcher_monochrome.webp`) and splash drawables across `mdpi`, `hdpi`, `xhdpi`, `xxhdpi`, and `xxxhdpi`.
+
+---
+
 ## 🎯 Unified Artifact Collection (`releases/`)
 
 To prevent developers from having to dig through nested build trees (`apps/mobile/android/app/build/...`, `target/release/bundle/...`), DocChisel includes a central collector script:
@@ -431,6 +462,7 @@ The following root npm scripts allow you to build **and** automatically collect 
 | `npm run package:windows`       | Builds Windows MSI & EXE installer + collects        | `releases/windows/*.msi` & `*.exe` |
 | `npm run package:ios`           | Builds release engine + iOS release + collects       | `releases/ios/*.ipa`               |
 | `npm run package:artifacts`     | Gathers any existing built binaries into `releases/` | `releases/<platform>/`             |
+| `npm run generate:icons`        | Compiles brand SVGs into all platform icons & splash | `apps/*/icons/` & `res/mipmap-*/`  |
 
 ---
 
