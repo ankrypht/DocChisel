@@ -110,6 +110,10 @@ npm run check:all
    ```
 3. **Android Development Tools**:
    - Download and install [Android Studio](https://developer.android.com/studio).
+   - Install JDK 17 (required by Gradle, Expo & React Native):
+     ```bash
+     brew install openjdk@17
+     ```
    - In Android Studio **SDK Manager**:
      - SDK Platforms: **Android 14 (API 34)** or **Android 15 (API 35)**.
      - SDK Tools: Android SDK Build-Tools, Android SDK Platform-Tools, CMake, and **NDK (Side by side)** version `26.x` or `27.x`.
@@ -121,7 +125,8 @@ npm run check:all
    - Add environment variables to `~/.zshrc`:
      ```bash
      export ANDROID_HOME="$HOME/Library/Android/sdk"
-     export PATH="$PATH:$ANDROID_HOME/emulator:$ANDROID_HOME/platform-tools"
+     export JAVA_HOME="/opt/homebrew/opt/openjdk@17" # Use "/usr/local/opt/openjdk@17" for Intel Macs
+     export PATH="$JAVA_HOME/bin:$PATH:$ANDROID_HOME/emulator:$ANDROID_HOME/platform-tools"
      ```
 4. **(Optional) Windows Cross-Compilation Toolchain on macOS**:
    To compile Windows NSIS `.exe` setup installers directly on macOS:
@@ -164,6 +169,11 @@ npm run check:all
    ```
 5. **Android Development Tools**:
    - Install [Android Studio for Windows](https://developer.android.com/studio).
+   - Install JDK 17 (required by Gradle, Expo & React Native):
+     ```powershell
+     winget install Microsoft.OpenJDK.17
+     # or: winget install EclipseAdoptium.Temurin.17.JDK
+     ```
    - In **SDK Manager**, install:
      - Android SDK Platform 34 or 35
      - Android SDK Build-Tools
@@ -175,7 +185,8 @@ npm run check:all
      ```
    - Configure Environment Variables (System Properties -> Environment Variables):
      - `ANDROID_HOME`: `%LOCALAPPDATA%\Android\Sdk`
-     - Add to `PATH`: `%ANDROID_HOME%\platform-tools`, `%ANDROID_HOME%\emulator`
+     - `JAVA_HOME`: `C:\Program Files\Microsoft\jdk-17.x.x-hotspot` (or your JDK 17 install directory)
+     - Add to `PATH`: `%JAVA_HOME%\bin`, `%ANDROID_HOME%\platform-tools`, `%ANDROID_HOME%\emulator`
 
 ---
 
@@ -231,7 +242,11 @@ npm run check:all
      ```bash
      sudo apt install -y openjdk-17-jdk   # Debian/Ubuntu
      # or: sudo dnf install -y java-17-openjdk-devel # Fedora
+     # or: sudo pacman -S jdk17-openjdk  # Arch Linux
      ```
+   - In Android Studio **SDK Manager**:
+     - SDK Platforms: **Android 14 (API 34)** or **Android 15 (API 35)**.
+     - SDK Tools: Android SDK Build-Tools, Android SDK Platform-Tools, CMake, and **NDK (Side by side)** version `26.x` or `27.x`.
    - Install `cargo-ndk` and Android Rust targets:
      ```bash
      cargo install cargo-ndk
@@ -240,7 +255,8 @@ npm run check:all
    - Add environment variables to `~/.bashrc`:
      ```bash
      export ANDROID_HOME="$HOME/Android/Sdk"
-     export PATH="$PATH:$ANDROID_HOME/emulator:$ANDROID_HOME/platform-tools"
+     export JAVA_HOME="/usr/lib/jvm/java-17-openjdk-amd64" # Adjust path for Fedora/Arch if needed
+     export PATH="$JAVA_HOME/bin:$PATH:$ANDROID_HOME/emulator:$ANDROID_HOME/platform-tools"
      ```
 3. **(Optional) Windows Cross-Compilation Toolchain on Linux**:
    ```bash
