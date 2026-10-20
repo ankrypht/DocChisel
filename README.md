@@ -12,7 +12,7 @@
 - **🔒 100% Local & Offline**: Your files never leave your device. Zero cloud uploads, zero remote dependencies, zero tracking.
 - **🦀 High-Performance Rust Core Engine**: Multi-threaded with Rayon, SIMD image resampling with Lanczos3, and memory-mapped streaming.
 - **🖥️ Cross-Platform Desktop App**: Built with Tauri v2 + React 19 + Tailwind CSS for macOS, Windows, and Linux.
-- **📱 Mobile App**: Built with Expo + React Native + NativeWind with a native UniFFI Rust bridge for iOS and Android.
+- **📱 Mobile App**: Built with Expo + React Native + NativeWind with a native UniFFI Rust bridge for Android (and architected for iOS; iOS is currently untested and not released pending App Store fees).
 - **🎨 Sleek Dark Aesthetic**: Modern dark interface inspired by Apple & Zinc design principles.
 - **📄 Permissive Open-Source**: Licensed under Apache 2.0.
 
@@ -58,7 +58,7 @@ DocChisel/
 - [Node.js](https://nodejs.org/) (v20+)
 - [Rust](https://rustup.rs/) (v1.75+)
 - For Desktop builds: [Tauri Prerequisites](https://v2.tauri.app/start/prerequisites/) (Windows C++ Build Tools on Windows, Xcode CLI on macOS)
-- For Mobile builds: Android Studio / Xcode, and [cargo-ndk](https://github.com/bbqsrc/cargo-ndk) (for Android NDK compilation)
+- For Mobile builds: Android Studio, Android SDK / NDK, and [cargo-ndk](https://github.com/bbqsrc/cargo-ndk) (for Android NDK compilation). Xcode is optional and only required if building for iOS in the future.
 
 > [!NOTE]
 > All build, mobile engine generation, cleanup, and artifact packaging scripts in `scripts/` are written in native Node.js (`.mjs`) and execute seamlessly across Windows (PowerShell / CMD), macOS, and Linux without requiring WSL or Git Bash.
@@ -82,16 +82,25 @@ npm run desktop:dev
 
 ### Running the Mobile App
 
+> [!NOTE]
+> **iOS Status (Untested / Deferred)**: DocChisel mobile is actively developed, tested, and targeted for **Android**. The mobile codebase and UniFFI Swift bridge architecture retain full iOS readiness for future releases, but iOS builds are currently **untested** and unreleased pending Apple Developer App Store account registration. All default mobile scripts build exclusively for Android to prevent unnecessary compilation cycles and disk space consumption.
+
 ```bash
-# Build the native Rust engine for mobile (Android/iOS)
-npm run mobile:build-engine
+# Build the native Rust engine for Android development (arm64-v8a fast dev)
+npm run mobile:build-engine:android
 
 # Start the Expo development server
 npm run mobile:start
 
-# Or launch directly on Android / iOS
+# Launch directly on Android emulator or connected device
 npm run mobile:android
-npm run mobile:ios
+
+# (Optional / Untested) To compile the native engine and launch on iOS in the future:
+# npm run mobile:build-engine:ios
+# npm run mobile:ios
+
+# Or build for all mobile platforms:
+# npm run mobile:build-engine:all
 ```
 
 ### Running Tests

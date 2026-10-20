@@ -12,7 +12,10 @@
     "tauri:build:no-bundle": "tauri build --no-bundle",
     "build:mac": "tauri build",
     "build:mac-universal": "tauri build --target universal-apple-darwin",
-    "build:windows": "tauri build --target x86_64-pc-windows-msvc"
+    "build:windows": "tauri build --target x86_64-pc-windows-msvc",
+    "build:linux": "tauri build",
+    "build:all": "npm run build:mac && npm run build:windows",
+    "clean": "node -e \"const fs = require('fs'); ['dist', 'node_modules/.vite', 'node_modules/.vite-temp'].forEach(p => fs.rmSync(p, { recursive: true, force: true }));\""
   },
   "dependencies": {
     "@docchisel/shared": "*",

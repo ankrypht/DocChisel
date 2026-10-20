@@ -42,8 +42,15 @@ function formatBytes(bytes) {
 function removeDirectory(targetPath, description) {
   try {
     if (fs.existsSync(targetPath)) {
-      const size = getDirectorySize(targetPath);
-      fs.rmSync(targetPath, { recursive: true, force: true });
+      const stats = fs.statSync(targetPath);
+      let size = 0;
+      if (stats.isDirectory()) {
+        size = getDirectorySize(targetPath);
+        fs.rmSync(targetPath, { recursive: true, force: true });
+      } else {
+        size = stats.size;
+        fs.rmSync(targetPath, { force: true });
+      }
       freedBytes += size;
       prunedCount++;
       const relative = path.relative(REPO_ROOT, targetPath);
@@ -112,7 +119,7 @@ function checkAndPruneAndroid(moduleDir) {
   }
 }
 
-// 3. iOS Disposable Intermediates
+// 3. iOS Disposable Intermediates & Stray Artifacts
 removeDirectory(
   path.join(REPO_ROOT, 'apps/mobile/ios/build'),
   'iOS mobile build intermediates'
@@ -121,6 +128,30 @@ removeDirectory(
   path.join(REPO_ROOT, 'apps/mobile/ios/DerivedData'),
   'iOS DerivedData'
 );
+removeDirectory(
+  path.join(REPO_ROOT, 'apps/mobile/ios/Pods'),
+  'iOS CocoaPods directory'
+);
+removeDirectory(
+  path.join(REPO_ROOT, 'apps/mobile/modules/docchisel-bridge/ios/libcore_engine.a'),
+  'Stale iOS native static library'
+);
+removeDirectory(
+  path.join(REPO_ROOT, 'target/aarch64-apple-ios-sim'),
+  'iOS simulator Rust target cache'
+);
+removeDirectory(
+  path.join(REPO_ROOT, 'target/aarch64-apple-ios'),
+  'iOS device Rust target cache'
+);
+removeDirectory(
+  path.join(REPO_ROOT, 'target/x86_64-apple-ios'),
+  'iOS x86_64 Rust target cache'
+);
+const emptyIosReleases = path.join(REPO_ROOT, 'releases/ios');
+if (fs.existsSync(emptyIosReleases) && fs.readdirSync(emptyIosReleases).length === 0) {
+  removeDirectory(emptyIosReleases, 'Empty releases/ios folder');
+}
 
 // 4. Vite & Bundler Disposable Temp Files
 removeDirectory(

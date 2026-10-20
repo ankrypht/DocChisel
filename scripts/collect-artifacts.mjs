@@ -14,10 +14,8 @@ console.log('📦 [DocChisel] Collecting Release Artifacts');
 console.log(`   Destination: ${destDir}`);
 console.log('==================================================');
 
-const platforms = ['android', 'macos', 'windows', 'ios'];
-for (const plat of platforms) {
-  fs.mkdirSync(path.join(destDir, plat), { recursive: true });
-}
+const platforms = ['android', 'macos', 'windows', 'linux', 'ios'];
+fs.mkdirSync(destDir, { recursive: true });
 
 let count = 0;
 
@@ -31,7 +29,9 @@ function formatBytes(bytes) {
 
 function recordFile(src, destSubdir) {
   const filename = path.basename(src);
-  const targetPath = path.join(destDir, destSubdir, filename);
+  const targetSubdir = path.join(destDir, destSubdir);
+  fs.mkdirSync(targetSubdir, { recursive: true });
+  const targetPath = path.join(targetSubdir, filename);
   fs.copyFileSync(src, targetPath);
   const stats = fs.statSync(targetPath);
   console.log(`  ✓ [${destSubdir}] ${filename} (${formatBytes(stats.size)})`);
@@ -40,7 +40,9 @@ function recordFile(src, destSubdir) {
 
 function recordDirectory(srcDir, destSubdir) {
   const dirName = path.basename(srcDir);
-  const targetDir = path.join(destDir, destSubdir, dirName);
+  const targetSubdir = path.join(destDir, destSubdir);
+  fs.mkdirSync(targetSubdir, { recursive: true });
+  const targetDir = path.join(targetSubdir, dirName);
   if (fs.existsSync(targetDir)) {
     fs.rmSync(targetDir, { recursive: true, force: true });
   }
@@ -136,16 +138,33 @@ for (const sDir of searchDirs) {
   }
 }
 
-// 5. iOS (.ipa)
-console.log('==> Checking for iOS builds...');
+// 5. Linux Desktop (.deb, .AppImage, .rpm)
+console.log('==> Checking for Linux packages...');
+for (const sDir of searchDirs) {
+  const linuxPackages = findFilesRecursive(sDir, (name) => {
+    const lower = name.toLowerCase();
+    return lower.endsWith('.deb') || lower.endsWith('.appimage') || lower.endsWith('.rpm');
+  });
+  for (const file of linuxPackages) {
+    recordFile(file, 'linux');
+  }
+}
+
+// 6. iOS (.ipa) - Optional & Untested
+console.log('==> Checking for iOS builds (optional / untested)...');
 const iosSearchDirs = [
   path.join(REPO_ROOT, 'apps/mobile/ios/build'),
   path.join(REPO_ROOT, 'apps/mobile'),
 ];
+let foundIos = false;
 for (const iDir of iosSearchDirs) {
   for (const file of findFilesRecursive(iDir, (name) => name.endsWith('.ipa'), 5)) {
     recordFile(file, 'ios');
+    foundIos = true;
   }
+}
+if (!foundIos) {
+  console.log('  ℹ️ No iOS builds found (iOS build pipeline is preserved but untested & unreleased).');
 }
 
 // Post-collection cleanup of disposable intermediate scratch caches
@@ -179,11 +198,14 @@ if (count > 0) {
 } else {
   console.log('ℹ️ No newly built artifacts found yet to collect.');
   console.log('\nTo build artifacts:');
-  console.log('  • Android APK:      npm run mobile:build:apk-release');
-  console.log('  • Android AAB:      npm run mobile:build:bundle');
-  console.log('  • macOS Desktop:    npm run desktop:package:mac');
-  console.log('  • Windows Desktop:  npm run desktop:package:windows');
-  console.log('  • iOS App:          npm run mobile:ios:release');
-  console.log('  • Or one-step:      npm run package:android / npm run package:mac / npm run package:windows');
+  console.log('  • Android APK:       npm run mobile:build:apk-release');
+  console.log('  • Android AAB:       npm run mobile:build:bundle');
+  console.log('  • macOS Desktop:     npm run desktop:package:mac');
+  console.log('  • Windows Desktop:   npm run desktop:package:windows');
+  console.log('  • Linux Desktop:     npm run desktop:package:linux');
+  console.log('  • All Desktop:       npm run desktop:package:all');
+  console.log('  • iOS App (Future):  npm run mobile:ios:release (Option preserved; untested)');
+  console.log('\nAfter building, collect all binaries with:');
+  console.log('  • npm run package:artifacts');
   console.log('==================================================');
 }

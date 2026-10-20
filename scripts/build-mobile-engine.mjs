@@ -10,18 +10,34 @@ const REPO_ROOT = path.resolve(__dirname, '..');
 const isRelease = process.argv.includes('--release');
 const isAndroidOnly = process.argv.includes('--android');
 const isIosOnly = process.argv.includes('--ios');
+const isAll = process.argv.includes('--all');
 const shouldPrune = process.argv.includes('--prune') || process.argv.includes('--prune-intermediates');
 
 const targetArgIndex = process.argv.indexOf('--target');
 const customTarget = targetArgIndex !== -1 ? process.argv[targetArgIndex + 1] : null;
 
-const shouldBuildAndroid = !isIosOnly;
-const shouldBuildIos = !isAndroidOnly;
+if (!isAndroidOnly && !isIosOnly && !isAll) {
+  console.error('==================================================');
+  console.error('❌ Error: No target platform specified for mobile engine build.');
+  console.error('Please specify a target platform:');
+  console.error('  • Android (dev):     npm run mobile:build-engine:android');
+  console.error('  • Android (release): npm run mobile:build-engine:android:release');
+  console.error('  • iOS (dev):         npm run mobile:build-engine:ios');
+  console.error('  • iOS (release):     npm run mobile:build-engine:ios:release');
+  console.error('  • All platforms:     npm run mobile:build-engine:all');
+  console.error('  • All (release):     npm run mobile:build-engine:all:release');
+  console.error('==================================================');
+  process.exit(1);
+}
+
+const shouldBuildIos = isIosOnly || isAll;
+const shouldBuildAndroid = isAndroidOnly || isAll;
 
 console.log('==================================================');
 console.log(`==> [DocChisel] Building Core Engine for Mobile (${isRelease ? 'Release' : 'Dev'})`);
 if (isAndroidOnly) console.log('==> Platform Filter: Android only');
-if (isIosOnly) console.log('==> Platform Filter: iOS only');
+if (isIosOnly) console.log('==> Platform Filter: iOS only (Untested)');
+if (isAll) console.log('==> Platform Filter: Android + iOS (All)');
 if (customTarget) console.log(`==> Specific Target ABI: ${customTarget}`);
 console.log('==================================================');
 
@@ -103,7 +119,7 @@ if (shouldBuildAndroid) {
   console.log('ℹ️ Skipping Android build (--ios specified).');
 }
 
-// 2. Build iOS static library (.a) - only supported on macOS
+// 2. Build iOS static library (.a) - only when explicitly targeted
 if (shouldBuildIos) {
   if (process.platform === 'darwin') {
     console.log('==> Compiling for iOS targets...');
@@ -135,11 +151,19 @@ if (shouldBuildIos) {
     console.log('ℹ️ Skipping iOS build (requires macOS and Xcode).');
   }
 } else {
-  console.log('ℹ️ Skipping iOS build (--android specified).');
+  console.log('ℹ️ Skipping iOS native build (iOS is optional & untested; use --ios or --all to compile iOS).');
+  // Clean up any stale iOS static library in the bridge module to reclaim storage space
+  const staleIosLib = path.join(iosLibDir, 'libcore_engine.a');
+  if (fs.existsSync(staleIosLib)) {
+    try {
+      fs.rmSync(staleIosLib, { force: true });
+      console.log('  ✓ Removed stale libcore_engine.a from iOS bridge module');
+    } catch {}
+  }
 }
 
-// 3. Generate UniFFI Bindings for Swift and Kotlin
-console.log('==> Generating UniFFI Bindings for Swift and Kotlin...');
+// 3. Generate UniFFI Bindings for Kotlin (and Swift if iOS enabled)
+console.log('==> Generating UniFFI Bindings...');
 
 let dylibName = 'libcore_engine.dylib';
 if (process.platform === 'win32') {
@@ -171,44 +195,65 @@ if (!fs.existsSync(dylibPath)) {
 }
 
 if (fs.existsSync(dylibPath)) {
-  const genResult = spawnSync(
-    'cargo',
-    [
-      'run',
-      '--package',
-      'core_engine',
-      '--bin',
-      'uniffi-bindgen',
-      '--',
-      'generate',
-      '--library',
-      dylibPath,
-      '--language',
-      'swift',
-      '--language',
-      'kotlin',
-      '--no-format',
-      '--out-dir',
-      iosLibDir,
-    ],
-    { cwd: REPO_ROOT, stdio: 'inherit', shell: process.platform === 'win32' }
-  );
+  const languages = ['kotlin'];
+  if (shouldBuildIos) {
+    languages.push('swift');
+  }
 
-  // Copy Kotlin output to proper package structure
-  const uniffiDir = path.join(iosLibDir, 'uniffi');
+  const stagingDir = path.join(REPO_ROOT, 'target/uniffi-staging');
+  if (fs.existsSync(stagingDir)) {
+    fs.rmSync(stagingDir, { recursive: true, force: true });
+  }
+  fs.mkdirSync(stagingDir, { recursive: true });
+
+  const uniffiArgs = [
+    'run',
+    '--package',
+    'core_engine',
+    '--bin',
+    'uniffi-bindgen',
+    '--',
+    'generate',
+    '--library',
+    dylibPath,
+    ...languages.flatMap((l) => ['--language', l]),
+    '--no-format',
+    '--out-dir',
+    stagingDir,
+  ];
+
+  const genResult = spawnSync('cargo', uniffiArgs, {
+    cwd: REPO_ROOT,
+    stdio: 'inherit',
+    shell: process.platform === 'win32',
+  });
+
+  // 1. Copy Kotlin output to proper package structure
+  const uniffiDir = path.join(stagingDir, 'uniffi');
   if (fs.existsSync(uniffiDir)) {
     const destUniffi = path.join(kotlinOut, 'uniffi');
     if (fs.existsSync(destUniffi)) {
       fs.rmSync(destUniffi, { recursive: true, force: true });
     }
     fs.cpSync(uniffiDir, destUniffi, { recursive: true });
-    fs.rmSync(uniffiDir, { recursive: true, force: true });
     console.log('✓ Generated Kotlin bindings in Android docchisel-bridge module');
   }
 
-  if (fs.existsSync(path.join(iosLibDir, 'docchisel_core.swift'))) {
+  // 2. If iOS is enabled, copy Swift bindings to iOS module
+  if (shouldBuildIos) {
+    const generated = fs.readdirSync(stagingDir);
+    for (const f of generated) {
+      if (f.endsWith('.swift') || f.endsWith('.h') || f.endsWith('.modulemap')) {
+        fs.copyFileSync(path.join(stagingDir, f), path.join(iosLibDir, f));
+      }
+    }
     console.log('✓ Generated Swift bindings in iOS docchisel-bridge module');
   }
+
+  // Clean staging directory
+  try {
+    fs.rmSync(stagingDir, { recursive: true, force: true });
+  } catch {}
 }
 
 // 4. Auto-prune disposable intermediate scratch caches if requested

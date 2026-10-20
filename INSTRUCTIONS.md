@@ -4,8 +4,8 @@ This document provides a comprehensive, step-by-step guide for anyone cloning th
 
 - System prerequisites for every target platform
 - Initial workspace installation and verification
-- Testing and hot-reload development servers (Desktop, Android, and iOS)
-- Building production binaries for all operating systems (**Android APK & `.aab`**, **macOS DMG & `.app`**, **Windows `.msi` & `.exe`**, and **iOS**)
+- Testing and hot-reload development servers (Desktop, Android, and future iOS)
+- Building production binaries for supported operating systems (**Android APK & `.aab`**, **macOS DMG & `.app`**, **Windows `.msi` & `.exe`**, and optional **iOS**)
 - Automatic collection of all final release binaries into a unified root directory: `releases/`
 
 ---
@@ -22,14 +22,14 @@ This document provides a comprehensive, step-by-step guide for anyone cloning th
 4. [Testing & Hot-Reload Development](#-testing--hot-reload-development)
    - [Desktop App (macOS & Windows)](#1-desktop-app-development-with-hot-reload)
    - [Android App (Emulator or Device)](#2-android-app-development-with-hot-reload)
-   - [iOS App (Simulator or Device)](#3-ios-app-development-with-hot-reload)
+   - [iOS App (Optional / Untested)](#3-ios-app-development-optional--untested)
    - [Rust Core Engine Tests](#4-rust-core-engine-tests)
    - [TypeScript Type Checking](#5-typescript-type-checking)
 5. [Production Build & Packaging](#-production-build--packaging)
    - [Android: Release APK and Google Play .aab](#1-android-production-builds-apk--aab)
    - [macOS Desktop: DMG and .app](#2-macos-desktop-builds-dmg--app)
    - [Windows Desktop: MSI and Setup .exe](#3-windows-desktop-builds-msi--exe)
-   - [iOS Mobile: Release Bundle](#4-ios-mobile-builds)
+   - [iOS Mobile: Release Bundle (Optional / Untested)](#4-ios-mobile-builds-optional--untested)
 6. [Brand Assets & Icon Generation Pipeline](#-brand-assets--icon-generation-pipeline)
 7. [Unified Artifact Collection (`releases/`)](#-unified-artifact-collection-releases)
 8. [Convenience Scripts Cheat Sheet](#-convenience-scripts-cheat-sheet)
@@ -83,14 +83,14 @@ DocChisel/
 
 ### 2. macOS & iOS Tooling (Apple Silicon & Intel)
 
-Required for building macOS desktop apps and iOS mobile apps:
+Required for building macOS desktop apps (and optionally iOS mobile apps):
 
-1. **Xcode**: Install Xcode 15+ from the Mac App Store or Apple Developer portal.
+1. **Xcode**: Install Xcode 15+ from the Mac App Store or Apple Developer portal (required for macOS desktop Tauri builds).
 2. **Xcode Command Line Tools**:
    ```bash
    xcode-select --install
    ```
-3. **CocoaPods**:
+3. **CocoaPods** _(Only needed if optionally building iOS in the future)_:
    ```bash
    brew install cocoapods
    # or: sudo gem install cocoapods
@@ -98,11 +98,11 @@ Required for building macOS desktop apps and iOS mobile apps:
 4. **Rust Target Toolchains**:
 
    ```bash
-   # macOS targets
+   # macOS targets (Active desktop build targets)
    rustup target add aarch64-apple-darwin
    rustup target add x86_64-apple-darwin
 
-   # iOS targets
+   # iOS targets (Optional; only install if building for iOS in the future)
    rustup target add aarch64-apple-ios
    rustup target add aarch64-apple-ios-sim
    rustup target add x86_64-apple-ios
@@ -212,8 +212,8 @@ npm run desktop:dev
 Developing for Android requires the native Rust engine to be compiled for the mobile bridge:
 
 ```bash
-# Step 1: Build the mobile Rust engine for development (arm64-v8a fast compilation)
-npm run mobile:build-engine
+# Step 1: Build the mobile Rust engine for Android dev (arm64-v8a fast compilation)
+npm run mobile:build-engine:android
 
 # Step 2: Boot an Android emulator (or connect a physical device via USB debugging)
 # Step 3: Run the app on Android
@@ -231,13 +231,16 @@ npm run mobile:android
 
 ---
 
-### 3. iOS App Development (with Hot Reload)
+### 3. iOS App Development (Optional / Untested)
 
-_(Requires macOS and Xcode)_
+> [!NOTE]
+> **Status: Untested & Unreleased**: The iOS build is currently **untested** and deferred pending Apple Developer App Store account registration. The complete mobile architecture, Swift UniFFI bridge, and Expo configuration remain fully intact in the repository for future activation. Default mobile commands compile exclusively for Android to prevent wasting disk space and build time on unused iOS assets.
+
+_To build and launch on the iOS Simulator (requires macOS and Xcode):_
 
 ```bash
-# Step 1: Build the mobile Rust engine for iOS targets
-npm run mobile:build-engine
+# Step 1: Build the mobile Rust engine explicitly for iOS targets
+npm run mobile:build-engine:ios
 
 # Step 2: Launch on iOS Simulator
 npm run mobile:ios
@@ -370,7 +373,10 @@ npm run desktop:package:windows
 
 ---
 
-### 4. iOS Mobile Builds
+### 4. iOS Mobile Builds (Optional / Untested)
+
+> [!NOTE]
+> **Status: Untested & Unreleased**: iOS release packaging is preserved as a future option, but is currently untested and deferred until an Apple Developer subscription is active.
 
 _(Run on macOS with Xcode)_
 
@@ -452,24 +458,39 @@ npm run package:artifacts
 
 ## ⚡ Convenience Scripts Cheat Sheet
 
-The following root npm scripts allow you to build **and** automatically collect your binaries in a single command:
+The following root npm scripts provide dedicated, platform-specific commands to build, clean, and collect your binaries:
 
-| Command                                 | Action                                               | Output in `releases/`              |
+| Command                                 | Action                                               | Output / Purpose                   |
 | :-------------------------------------- | :--------------------------------------------------- | :--------------------------------- |
-| `npm run package:android`               | Builds Android engine + APK + `.aab` + collects      | `releases/android/*.apk` & `*.aab` |
-| `npm run package:android:apk`           | Builds Android engine + Release APK + collects       | `releases/android/*.apk`           |
-| `npm run package:android:aab`           | Builds Android engine + Release `.aab` + collects    | `releases/android/*.aab`           |
-| `npm run package:mac`                   | Builds macOS DMG & App bundle + collects             | `releases/macos/*.dmg` & `.app`    |
-| `npm run package:mac-universal`         | Builds Universal macOS bundle + collects             | `releases/macos/*.dmg` & `.app`    |
-| `npm run package:windows`               | Builds Windows MSI & EXE installer + collects        | `releases/windows/*.msi` & `*.exe` |
-| `npm run package:ios`                   | Builds iOS engine + iOS release + collects           | `releases/ios/*.ipa`               |
-| `npm run package:artifacts`             | Gathers any existing built binaries into `releases/` | `releases/<platform>/`             |
+| **Desktop Builds**                      |                                                      |                                    |
+| `npm run desktop:package:mac`           | Builds macOS DMG & App bundle                        | `target/.../bundle/macos/`         |
+| `npm run desktop:package:mac-universal` | Builds Universal macOS DMG & App bundle              | `target/.../bundle/macos/`         |
+| `npm run desktop:package:windows`       | Builds Windows MSI & EXE installer                   | `target/.../bundle/msi/` & `nsis/` |
+| `npm run desktop:package:linux`         | Builds Linux DEB / AppImage                          | `target/.../bundle/deb/`           |
+| `npm run desktop:package:all`           | Builds macOS & Windows desktop binaries              | Desktop release bundles            |
+| **Mobile Builds**                       |                                                      |                                    |
+| `npm run mobile:build:apk-debug`        | Compiles Android debug APK                           | `apps/mobile/.../apk/debug/`       |
+| `npm run mobile:build:apk-release`      | Compiles multi-architecture Android release APK      | `apps/mobile/.../apk/release/`     |
+| `npm run mobile:build:bundle`           | Compiles Android Google Play release `.aab`          | `apps/mobile/.../bundle/`          |
+| `npm run mobile:ios:release`            | (Untested) Compiles iOS release configuration        | `apps/mobile/ios/build/`           |
+| **Artifact Collection**                 |                                                      |                                    |
+| `npm run package:artifacts`             | Gathers all built binaries into unified `releases/`  | `releases/<platform>/`             |
+| **Mobile Native Engine Builds**         |                                                      |                                    |
+| `npm run mobile:build-engine:android`   | Compiles dev mobile engine for Android (arm64-v8a)   | `docchisel-bridge/.../jniLibs`     |
+| `npm run mobile:build-engine:android:release` | Compiles release engine for Android (all ABIs) | `docchisel-bridge/.../jniLibs`     |
+| `npm run mobile:build-engine:ios`       | (Untested) Compiles dev engine for iOS simulator     | `docchisel-bridge/.../libcore_engine.a` |
+| `npm run mobile:build-engine:ios:release` | (Untested) Compiles release engine for iOS targets | `docchisel-bridge/.../libcore_engine.a` |
+| `npm run mobile:build-engine:all`       | Compiles dev engine for both Android and iOS         | Both mobile bridges                |
+| `npm run mobile:build-engine:all:release` | Compiles release engine for both Android and iOS   | Both mobile bridges                |
+| **Maintenance & Cleaning**              |                                                      |                                    |
 | `npm run prune`                         | Safely purges intermediate scratchpads (.cxx, etc.)  | Reclaims 5–15 GB build cache       |
 | `npm run clean:intermediates`           | Alias for `npm run prune`                            | Reclaims 5–15 GB build cache       |
-| `npm run clean`                         | Full reset: runs `cargo clean` and wipes caches      | Clean workspace                    |
+| `npm run clean`                         | Full workspace reset: `cargo clean` and wipes caches | Clean workspace                    |
 | `npm run clean:deep`                    | Deep reset: wipes caches plus `releases/` folder     | Pristine repository                |
-| `npm run mobile:build-engine:android:release` | Compiles release engine for Android targets only | `docchisel-bridge/.../jniLibs`     |
-| `npm run mobile:build-engine:ios:release`     | Compiles release engine for iOS simulator/device | `docchisel-bridge/.../libcore_engine.a` |
+| `npm run desktop:clean`                 | Cleans Desktop Vite and temporary dist caches        | Clean desktop workspace            |
+| `npm run mobile:clean:android`          | Stops Gradle daemon and cleans Android build caches  | Clean Android workspace            |
+| `npm run mobile:clean:ios`              | Cleans iOS build artifacts and CocoaPods             | Clean iOS workspace                |
+| `npm run mobile:clean:all`              | Cleans both Android and iOS mobile build artifacts   | Clean mobile workspace             |
 | `npm run generate:icons`                | Compiles brand SVGs into all platform icons & splash | `apps/*/icons/` & `res/mipmap-*/`  |
 
 
@@ -483,7 +504,7 @@ Android 15+ devices require native ELF binaries to be aligned to 16 KB boundarie
 DocChisel's `scripts/build-mobile-engine.mjs` automatically passes `-C link-arg=-Wl,-z,max-page-size=16384` to `cargo-ndk`. Ensure you run:
 
 ```bash
-npm run mobile:build-engine:release
+npm run mobile:build-engine:android:release
 ```
 
 ### 2. Missing `cargo-ndk`
@@ -512,7 +533,7 @@ Cross-platform builds (especially compiling multiple native Rust targets and Rea
      - CMake/Ninja build trees (`app/.cxx` and `node_modules/**/android/.cxx`)
      - Native C++ builds inside `node_modules/**/android/build`
      - Cargo incremental caches (`target/*/incremental`)
-     - iOS DerivedData and mobile/desktop temporary bundler caches
+     - iOS DerivedData, CocoaPods, stray iOS static libraries, and temporary bundler caches
    - **When to use:** Anytime disk space feels tight or after running multiple builds. Reclaims **5–15 GB** instantly while keeping all built `.apk`, `.aab`, `.dmg`, `.exe`, and `.so` files intact.
 
 2. **Standard Clean (`npm run clean`):**
@@ -526,10 +547,10 @@ Cross-platform builds (especially compiling multiple native Rust targets and Rea
 
 To avoid compiling all 4 target architectures during local mobile feature development:
 ```bash
-# Compiles only arm64-v8a in dev mode (~1.5 GB in target/ instead of 9+ GB)
-npm run mobile:build-engine
+# Compiles only arm64-v8a in dev mode (~1.5 GB in target/ instead of 9+ GB, skips iOS completely)
+npm run mobile:build-engine:android
 ```
-When ready for production packaging, use the targeted packaging scripts (`npm run package:android` or `npm run package:ios`), which only compile the architectures required for that specific platform.
+When ready for production packaging, compile your platform directly (e.g. `npm run mobile:build:apk-release` or `npm run desktop:package:mac` / `npm run desktop:package:windows`), then run `npm run package:artifacts` to gather all binaries into `releases/`. Note that iOS is currently untested and not released pending App Store fees, though `npm run mobile:build-engine:ios` and `npm run mobile:ios:release` remain ready for future activation.
 
 
 ---

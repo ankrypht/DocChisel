@@ -96,6 +96,15 @@ function cleanModuleAndroid(moduleDir) {
 console.log('==> Cleaning iOS build artifacts & intermediates...');
 removeSafe(path.join(REPO_ROOT, 'apps/mobile/ios/build'), 'Mobile iOS build directory');
 removeSafe(path.join(REPO_ROOT, 'apps/mobile/ios/DerivedData'), 'Mobile iOS DerivedData');
+removeSafe(path.join(REPO_ROOT, 'apps/mobile/ios/Pods'), 'Mobile iOS CocoaPods directory');
+removeSafe(path.join(REPO_ROOT, 'apps/mobile/modules/docchisel-bridge/ios/libcore_engine.a'), 'Mobile iOS static library');
+removeSafe(path.join(REPO_ROOT, 'target/aarch64-apple-ios-sim'), 'iOS simulator Rust build cache');
+removeSafe(path.join(REPO_ROOT, 'target/aarch64-apple-ios'), 'iOS device Rust build cache');
+removeSafe(path.join(REPO_ROOT, 'target/x86_64-apple-ios'), 'iOS x86_64 Rust build cache');
+const iosReleasesDir = path.join(REPO_ROOT, 'releases/ios');
+if (fs.existsSync(iosReleasesDir) && fs.readdirSync(iosReleasesDir).length === 0) {
+  removeSafe(iosReleasesDir, 'Empty releases/ios directory');
+}
 
 // 5. Vite & Expo Bundler Caches
 console.log('==> Cleaning Vite & Expo bundler caches...');
