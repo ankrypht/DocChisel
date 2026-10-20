@@ -71,7 +71,11 @@ DocChisel/
     sudo pacman -S --needed webkit2gtk-4.1 base-devel curl wget file openssl appmenu-gtk-module libappindicator-gtk3 librsvg xdotool
     ```
   - **macOS**: Xcode Command Line Tools (`xcode-select --install`)
-  - **Windows**: Visual Studio 2022 C++ Build Tools (Desktop development with C++) and WebView2
+  - **Windows (Native)**: Visual Studio 2022 C++ Build Tools (Desktop development with C++) and WebView2
+  - **Windows Cross-Compilation on macOS / Linux**:
+    - macOS: `brew install makensis llvm lld`
+    - Linux: `sudo apt install -y nsis llvm lld`
+    - Runner & Target: `cargo install cargo-xwin` and `rustup target add x86_64-pc-windows-msvc`
 - For Mobile builds: Android Studio, Android SDK / NDK, and [cargo-ndk](https://github.com/bbqsrc/cargo-ndk) (for Android NDK compilation). Xcode is optional and only required if building for iOS in the future.
 
 > [!NOTE]
@@ -106,7 +110,7 @@ npm run desktop:dev:web
    npm run desktop:package:mac-universal
    # or for host-architecture testing: npm run desktop:package:mac
 
-   # Windows: Build NSIS Setup (.exe) installer
+   # Windows: Build NSIS Setup (.exe) installer (natively on Windows, or cross-compiled on macOS/Linux via cargo-xwin + makensis)
    npm run desktop:package:windows
 
    # Linux: Build Debian (.deb) package and standalone AppImage

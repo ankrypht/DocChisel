@@ -114,8 +114,11 @@ Required for building macOS desktop apps (and optionally iOS mobile apps):
 
 ### 3. Windows Desktop Tooling
 
-Required for building Windows NSIS `.exe` setup installers:
+DocChisel supports building Windows NSIS `.exe` setup installers in two ways:
+1. **Natively on Windows** (using Visual Studio C++ Build Tools & native Cargo)
+2. **Cross-Compiled on macOS or Linux** (using `cargo-xwin` + `makensis` + LLVM)
 
+#### Option A: Native Windows Tooling (Running on Windows)
 1. **Visual Studio 2022 / Build Tools**:
    - Install **Visual Studio C++ Build Tools** (Select the _"Desktop development with C++"_ workload).
 2. **WebView2**:
@@ -123,6 +126,37 @@ Required for building Windows NSIS `.exe` setup installers:
 3. **Rust Windows Target**:
    ```bash
    rustup default stable-x86_64-pc-windows-msvc
+   ```
+
+#### Option B: Cross-Compilation Tooling on macOS (Apple Silicon & Intel)
+Build Windows `.exe` setup installers directly on macOS without a Windows virtual machine:
+1. **Install NSIS & LLVM** via Homebrew:
+   ```bash
+   brew install makensis llvm lld
+   ```
+   *(LLVM provides `llvm-rc` for compiling Windows `.rc` resources and `lld-link` for linking)*
+2. **Install `cargo-xwin`**:
+   ```bash
+   cargo install cargo-xwin
+   ```
+3. **Add the Windows MSVC Rust Target**:
+   ```bash
+   rustup target add x86_64-pc-windows-msvc
+   ```
+
+#### Option C: Cross-Compilation Tooling on Linux (Ubuntu / Debian)
+Build Windows `.exe` setup installers directly on Linux:
+1. **Install NSIS & LLVM** via apt:
+   ```bash
+   sudo apt update && sudo apt install -y nsis llvm lld
+   ```
+2. **Install `cargo-xwin`**:
+   ```bash
+   cargo install cargo-xwin
+   ```
+3. **Add the Windows MSVC Rust Target**:
+   ```bash
+   rustup target add x86_64-pc-windows-msvc
    ```
 
 ---
@@ -359,7 +393,11 @@ npm run typecheck
 
 ## 📦 Production Build & Packaging
 
-All production builds can be run directly from the workspace root. After building, outputs can be automatically consolidated into `<repo_root>/releases` (see [Unified Artifact Collection](#-unified-artifact-collection-releases)).
+All production builds can be run directly from the workspace root via npm or through DocChisel's unified build orchestrators:
+- **Desktop Orchestrator**: `scripts/build-desktop.mjs` (accepts `--mac`, `--windows`, `--linux`, `--all`, or `--platform <target>`)
+- **Mobile Engine Orchestrator**: `scripts/build-mobile-engine.mjs` (accepts `--android`, `--ios`, `--all`, or `--target <ABI>`)
+
+After building, outputs can be automatically consolidated into `<repo_root>/releases` (see [Unified Artifact Collection](#-unified-artifact-collection-releases)).
 
 ---
 
@@ -438,14 +476,33 @@ npm run desktop:package:mac
 
 ### 3. Windows Desktop Builds (NSIS Setup .exe)
 
-_(Run on Windows with Visual Studio C++ Build Tools installed)_
+DocChisel builds the lean, standalone Windows NSIS setup installer (`DocChisel_<version>_x64-setup.exe`). This can be run **natively on Windows** or **cross-compiled directly on macOS / Linux** without needing a Windows machine or virtual machine.
+
+#### Build Command (Works across macOS, Linux, and Windows):
 
 ```bash
+# Production release build
 npm run desktop:package:windows
+
+# Or debug build for rapid testing
+npm run desktop:package:windows:debug
 ```
 
-- **Output location**: `target/release/bundle/nsis/DocChisel_<version>_x64-setup.exe`
-- _Note_: WiX Toolset and `.msi` installers are completely removed in favor of the lightweight NSIS setup executable.
+#### How the Automated Cross-Compilation Pipeline Works:
+DocChisel includes an intelligent cross-platform build orchestrator (`scripts/build-desktop.mjs`):
+- **On native Windows**: Directly runs `tauri build --bundles nsis` using MSVC and NSIS.
+- **On macOS / Linux**:
+  1. Validates that `makensis` (NSIS) and `cargo-xwin` are present.
+  2. Automatically detects Homebrew or system LLVM toolchains and ensures `llvm-rc` and `lld-link` are in `$PATH`.
+  3. Verifies or automatically installs the `x86_64-pc-windows-msvc` target via `rustup`.
+  4. Automatically sets `CFLAGS="-msse4.1"` to satisfy `libwebp-sys` clang-cl SIMD intrinsic requirements.
+  5. Executes Tauri with the `cargo-xwin` runner (`tauri build --runner cargo-xwin --target x86_64-pc-windows-msvc --bundles nsis`).
+
+- **Output locations**:
+  - Cross-compiled on macOS/Linux: `target/x86_64-pc-windows-msvc/release/bundle/nsis/DocChisel_<version>_x64-setup.exe`
+  - Native Windows: `target/release/bundle/nsis/DocChisel_<version>_x64-setup.exe`
+- **Collecting into releases**: Run `npm run package:artifacts` to copy the installer to `releases/windows/DocChisel_<version>_x64-setup.exe`.
+- _Note_: WiX Toolset and legacy `.msi` installers are completely removed in favor of the single lean NSIS setup executable.
 
 ---
 
@@ -583,7 +640,8 @@ The following root npm scripts provide dedicated, platform-specific commands to 
 | **Desktop Builds**                      |                                                      |                                    |
 | `npm run desktop:package:mac-universal` | Builds Universal macOS DMG installer                 | `target/universal-apple-darwin/.../dmg/` |
 | `npm run desktop:package:mac`           | Builds Host macOS DMG installer                      | `target/.../bundle/dmg/`           |
-| `npm run desktop:package:windows`       | Builds Windows NSIS EXE installer                    | `target/.../bundle/nsis/`          |
+| `npm run desktop:package:windows`       | Builds Windows NSIS EXE installer (natively or via cargo-xwin + makensis) | `target/.../bundle/nsis/`          |
+| `npm run desktop:package:windows:debug` | Builds Windows NSIS EXE installer in debug mode      | `target/.../bundle/nsis/`          |
 | `npm run desktop:package:linux`         | Builds Linux DEB & AppImage release packages         | `target/.../bundle/deb/` & `appimage/` |
 | `npm run desktop:package:linux:deb`     | Builds Linux Debian package (.deb)                   | `target/.../bundle/deb/`           |
 | `npm run desktop:package:linux:appimage`| Builds Linux standalone AppImage                     | `target/.../bundle/appimage/`      |

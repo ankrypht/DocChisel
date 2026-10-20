@@ -1,0 +1,404 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { spawnSync, execSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const REPO_ROOT = path.resolve(__dirname, '..');
+const DESKTOP_DIR = path.join(REPO_ROOT, 'apps/desktop');
+
+const args = process.argv.slice(2);
+
+// Platform selection flags
+const platformIndex = args.indexOf('--platform');
+const platformVal = platformIndex !== -1 ? args[platformIndex + 1]?.toLowerCase() : null;
+
+const isMacUniversal = args.includes('--mac-universal') || (platformVal === 'mac' && args.includes('--universal'));
+const isMac = args.includes('--mac') || isMacUniversal || platformVal === 'mac' || platformVal === 'macos';
+const isWindows = args.includes('--windows') || args.includes('--win') || platformVal === 'windows' || platformVal === 'win';
+const isLinuxDeb = args.includes('--linux-deb') || (platformVal === 'linux' && args.includes('--deb'));
+const isLinuxAppImage = args.includes('--linux-appimage') || (platformVal === 'linux' && args.includes('--appimage'));
+const isLinux = args.includes('--linux') || isLinuxDeb || isLinuxAppImage || platformVal === 'linux';
+const isAll = args.includes('--all') || platformVal === 'all';
+
+const isDebug = args.includes('--debug');
+const passthroughArgs = args.filter((arg, i) => {
+  if (arg === '--debug') return false;
+  if (['--mac', '--mac-universal', '--universal', '--windows', '--win', '--linux', '--linux-deb', '--linux-appimage', '--all'].includes(arg)) return false;
+  if (arg === '--platform') return false;
+  if (i > 0 && args[i - 1] === '--platform') return false;
+  return true;
+});
+
+if (!isMac && !isWindows && !isLinux && !isAll) {
+  console.error('==================================================');
+  console.error('❌ Error: No desktop platform specified.');
+  console.error('Please specify a desktop platform:');
+  console.error('  • macOS (Universal): npm run desktop:package:mac-universal (or --mac-universal)');
+  console.error('  • macOS (Host):      npm run desktop:package:mac           (or --mac)');
+  console.error('  • Windows (NSIS):    npm run desktop:package:windows       (or --windows)');
+  console.error('  • Linux (All):       npm run desktop:package:linux         (or --linux)');
+  console.error('  • Linux (.deb):      npm run desktop:package:linux:deb     (or --linux-deb)');
+  console.error('  • Linux (.AppImage): npm run desktop:package:linux:appimage (or --linux-appimage)');
+  console.error('  • All Available:     npm run desktop:package:all           (or --all)');
+  console.error('  • Platform option:   node scripts/build-desktop.mjs --platform <mac|windows|linux|all>');
+  console.error('==================================================');
+  process.exit(1);
+}
+
+function formatBytes(bytes) {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
+}
+
+function commandExists(cmd) {
+  try {
+    const checkCmd = process.platform === 'win32' ? `where ${cmd}` : `which ${cmd}`;
+    execSync(checkCmd, { stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function runTauriBuild(tauriArgs, env = process.env) {
+  console.log(`\n==> Executing: npx ${tauriArgs.join(' ')}\n`);
+  const res = spawnSync('npx', tauriArgs, {
+    cwd: DESKTOP_DIR,
+    stdio: 'inherit',
+    env,
+  });
+  return res.status === 0;
+}
+
+function findArtifacts(searchDirs, filterFn) {
+  const found = [];
+  for (const sDir of searchDirs) {
+    if (fs.existsSync(sDir)) {
+      try {
+        const files = fs.readdirSync(sDir, { recursive: true });
+        for (const f of files) {
+          const fullPath = path.join(sDir, f);
+          if (fs.statSync(fullPath).isFile() && filterFn(path.basename(fullPath), fullPath)) {
+            found.push(fullPath);
+          }
+        }
+      } catch {}
+    }
+  }
+  return found;
+}
+
+console.log('==================================================');
+console.log(`🖥️  [DocChisel] Building Desktop Application (${isDebug ? 'Debug' : 'Release'})`);
+console.log(`   Host Platform: ${process.platform} (${process.arch})`);
+if (isAll) console.log('   Target Filter: All supported desktop platforms');
+else {
+  if (isMac) console.log(`   Target Filter: macOS ${isMacUniversal ? '(Universal Apple Silicon + Intel)' : '(Host Architecture)'}`);
+  if (isWindows) console.log('   Target Filter: Windows (NSIS Setup .exe)');
+  if (isLinux) console.log(`   Target Filter: Linux ${isLinuxDeb ? '(.deb only)' : (isLinuxAppImage ? '(.AppImage only)' : '(.deb + .AppImage)')}`);
+}
+console.log('==================================================');
+
+const modeDir = isDebug ? 'debug' : 'release';
+let buildSuccess = true;
+
+// ----------------------------------------------------
+// 1. macOS Build
+// ----------------------------------------------------
+if (isMac || isAll) {
+  console.log('\n--------------------------------------------------');
+  console.log(`🍎 Building macOS DMG Installer ${isMacUniversal ? '(Universal)' : ''}`);
+  console.log('--------------------------------------------------');
+
+  if (process.platform !== 'darwin') {
+    if (isAll) {
+      console.log('  ⚠️ Skipping macOS build (macOS DMG bundles must be built on macOS).');
+    } else {
+      console.error('❌ Error: macOS DMG bundles can only be built natively on macOS.');
+      console.error('   Apple codesigning, hdiutil, and Cocoa frameworks require a macOS host.');
+      process.exit(1);
+    }
+  } else {
+    const tauriArgs = ['tauri', 'build', '--bundles', 'dmg'];
+    if (isDebug) tauriArgs.push('--debug');
+
+    if (isMacUniversal) {
+      // Ensure both aarch64 and x86_64 targets are installed in rustup
+      try {
+        const installed = execSync('rustup target list --installed', { encoding: 'utf8' });
+        if (!installed.includes('aarch64-apple-darwin')) {
+          console.log('  ℹ️ Adding rustup target aarch64-apple-darwin...');
+          execSync('rustup target add aarch64-apple-darwin', { stdio: 'inherit' });
+        }
+        if (!installed.includes('x86_64-apple-darwin')) {
+          console.log('  ℹ️ Adding rustup target x86_64-apple-darwin...');
+          execSync('rustup target add x86_64-apple-darwin', { stdio: 'inherit' });
+        }
+      } catch (err) {
+        console.warn(`  ⚠️ Could not verify universal targets: ${err.message}`);
+      }
+
+      tauriArgs.push('--target', 'universal-apple-darwin');
+    }
+
+    tauriArgs.push(...passthroughArgs);
+
+    const ok = runTauriBuild(tauriArgs);
+    if (!ok) {
+      console.error('\n❌ macOS build failed.');
+      buildSuccess = false;
+    } else {
+      const searchDirs = [
+        path.join(REPO_ROOT, 'target', isMacUniversal ? 'universal-apple-darwin' : '', modeDir, 'bundle/dmg'),
+        path.join(DESKTOP_DIR, 'src-tauri/target', isMacUniversal ? 'universal-apple-darwin' : '', modeDir, 'bundle/dmg'),
+        path.join(REPO_ROOT, 'target', modeDir, 'bundle/dmg'),
+        path.join(DESKTOP_DIR, 'src-tauri/target', modeDir, 'bundle/dmg'),
+      ];
+      const dmgs = findArtifacts(searchDirs, (name) => name.toLowerCase().endsWith('.dmg'));
+      if (dmgs.length > 0) {
+        for (const dmg of dmgs) {
+          const stats = fs.statSync(dmg);
+          console.log(`  ✓ macOS DMG Generated: ${path.basename(dmg)} (${formatBytes(stats.size)})`);
+        }
+      }
+    }
+  }
+}
+
+// ----------------------------------------------------
+// 2. Windows Build
+// ----------------------------------------------------
+if (isWindows || isAll) {
+  console.log('\n--------------------------------------------------');
+  console.log('🪟 Building Windows NSIS Setup Installer (.exe)');
+  console.log('--------------------------------------------------');
+
+  const env = { ...process.env };
+
+  if (process.platform === 'win32') {
+    // Native Windows compilation
+    console.log('==> Running native Windows build with MSVC & NSIS...');
+    const tauriArgs = ['tauri', 'build', '--bundles', 'nsis'];
+    if (isDebug) tauriArgs.push('--debug');
+    tauriArgs.push(...passthroughArgs);
+
+    const ok = runTauriBuild(tauriArgs, env);
+    if (!ok) {
+      console.error('\n❌ Native Windows build failed.');
+      buildSuccess = false;
+    }
+  } else {
+    // Cross-compilation on macOS or Linux
+    console.log('==> Running cross-compilation pipeline (cargo-xwin + makensis)...');
+
+    // Verify makensis
+    if (!commandExists('makensis')) {
+      console.error('\n❌ makensis (NSIS) not found in PATH.');
+      if (process.platform === 'darwin') {
+        console.error('   Install via Homebrew: brew install makensis');
+      } else {
+        console.error('   Install via apt:      sudo apt update && sudo apt install -y nsis');
+      }
+      if (isAll) {
+        buildSuccess = false;
+      } else {
+        process.exit(1);
+      }
+    } else {
+      console.log('  ✓ makensis found');
+    }
+
+    // Verify cargo-xwin
+    let hasCargoXwin = commandExists('cargo-xwin');
+    if (!hasCargoXwin) {
+      try {
+        execSync('cargo xwin --version', { stdio: 'ignore' });
+        hasCargoXwin = true;
+      } catch {}
+    }
+    if (!hasCargoXwin) {
+      console.error('\n❌ cargo-xwin not found.');
+      console.error('   Install via Cargo: cargo install cargo-xwin');
+      if (isAll) {
+        buildSuccess = false;
+      } else {
+        process.exit(1);
+      }
+    } else {
+      console.log('  ✓ cargo-xwin found');
+    }
+
+    // Locate LLVM tools (llvm-rc, lld-link)
+    if (!commandExists('llvm-rc')) {
+      const candidateDirs = [
+        '/opt/homebrew/opt/llvm/bin',
+        '/usr/local/opt/llvm/bin',
+      ];
+      try {
+        const brewPrefix = execSync('brew --prefix llvm 2>/dev/null', { encoding: 'utf8' }).trim();
+        if (brewPrefix) candidateDirs.unshift(path.join(brewPrefix, 'bin'));
+      } catch {}
+
+      let foundLlvmPath = null;
+      for (const cDir of candidateDirs) {
+        if (fs.existsSync(path.join(cDir, 'llvm-rc'))) {
+          foundLlvmPath = cDir;
+          break;
+        }
+      }
+
+      if (foundLlvmPath) {
+        env.PATH = `${foundLlvmPath}:${env.PATH || ''}`;
+        console.log(`  ✓ Added LLVM tools to PATH from: ${foundLlvmPath}`);
+      } else {
+        console.error('\n❌ llvm-rc (part of LLVM) not found.');
+        if (process.platform === 'darwin') {
+          console.error('   Install via Homebrew: brew install llvm lld');
+        } else {
+          console.error('   Install via apt:      sudo apt update && sudo apt install -y llvm lld');
+        }
+        if (isAll) {
+          buildSuccess = false;
+        } else {
+          process.exit(1);
+        }
+      }
+    } else {
+      console.log('  ✓ llvm-rc found in PATH');
+    }
+
+    // Verify Rust Windows target
+    try {
+      const installed = execSync('rustup target list --installed', { encoding: 'utf8' });
+      if (!installed.includes('x86_64-pc-windows-msvc')) {
+        console.log('  ℹ️ Adding rustup target x86_64-pc-windows-msvc...');
+        execSync('rustup target add x86_64-pc-windows-msvc', { stdio: 'inherit' });
+      } else {
+        console.log('  ✓ Rust target x86_64-pc-windows-msvc installed');
+      }
+    } catch (err) {
+      console.warn(`  ⚠️ Could not verify rustup targets: ${err.message}`);
+    }
+
+    // Inject CFLAGS for clang-cl
+    const requiredCflag = '-msse4.1';
+    if (!env.CFLAGS || !env.CFLAGS.includes(requiredCflag)) {
+      env.CFLAGS = env.CFLAGS ? `${env.CFLAGS} ${requiredCflag}` : requiredCflag;
+    }
+    console.log(`  ✓ Configured CFLAGS="${env.CFLAGS}" for clang-cl MSVC target`);
+
+    // Execute Tauri build with cargo-xwin
+    const tauriArgs = [
+      'tauri',
+      'build',
+      '--runner',
+      'cargo-xwin',
+      '--target',
+      'x86_64-pc-windows-msvc',
+      '--bundles',
+      'nsis',
+    ];
+    if (isDebug) tauriArgs.push('--debug');
+    tauriArgs.push(...passthroughArgs);
+
+    const ok = runTauriBuild(tauriArgs, env);
+    if (!ok) {
+      console.error('\n❌ Cross-compilation for Windows failed.');
+      buildSuccess = false;
+    }
+  }
+
+  // Check generated Windows installer
+  const searchDirs = [
+    path.join(REPO_ROOT, 'target/x86_64-pc-windows-msvc', modeDir, 'bundle/nsis'),
+    path.join(DESKTOP_DIR, 'src-tauri/target/x86_64-pc-windows-msvc', modeDir, 'bundle/nsis'),
+    path.join(REPO_ROOT, 'target', modeDir, 'bundle/nsis'),
+    path.join(DESKTOP_DIR, 'src-tauri/target', modeDir, 'bundle/nsis'),
+  ];
+  const exes = findArtifacts(searchDirs, (name) => name.toLowerCase().endsWith('.exe'));
+  if (exes.length > 0) {
+    for (const exe of exes) {
+      const stats = fs.statSync(exe);
+      console.log(`  ✓ Windows NSIS Installer Generated: ${path.basename(exe)} (${formatBytes(stats.size)})`);
+    }
+  }
+}
+
+// ----------------------------------------------------
+// 3. Linux Build
+// ----------------------------------------------------
+if (isLinux || (isAll && process.platform === 'linux')) {
+  console.log('\n--------------------------------------------------');
+  console.log(`🐧 Building Linux Package (${isLinuxDeb ? 'DEB only' : (isLinuxAppImage ? 'AppImage only' : 'DEB + AppImage')})`);
+  console.log('--------------------------------------------------');
+
+  if (process.platform !== 'linux') {
+    if (isAll) {
+      console.log('  ⚠️ Skipping Linux build (Linux GUI packages require a Linux environment with WebKit2GTK).');
+    } else {
+      console.error('❌ Error: Linux desktop packages (.deb / .AppImage) cannot be compiled directly on macOS/Windows.');
+      console.error('   WebKit2GTK 4.1 and GTK3 are dynamic Linux system C libraries.');
+      console.error('\nTo build Linux packages:');
+      console.error('   1. Run natively on Ubuntu/Debian/Fedora/Arch, or');
+      console.error('   2. Build inside a Docker container, or');
+      console.error('   3. Run via Windows Subsystem for Linux (WSL2), or');
+      console.error('   4. Use GitHub Actions CI.');
+      process.exit(1);
+    }
+  } else {
+    // Verify WebKitGTK / GTK3 dependencies
+    if (commandExists('pkg-config')) {
+      try {
+        execSync('pkg-config --exists webkit2gtk-4.1', { stdio: 'ignore' });
+        console.log('  ✓ WebKit2GTK 4.1 development libraries found');
+      } catch {
+        console.warn('  ⚠️ Warning: pkg-config could not locate webkit2gtk-4.1.');
+        console.warn('     If build fails, install via: sudo apt install -y libwebkit2gtk-4.1-dev libgtk-3-dev');
+      }
+    }
+
+    let bundleTypes = 'deb,appimage';
+    if (isLinuxDeb) bundleTypes = 'deb';
+    if (isLinuxAppImage) bundleTypes = 'appimage';
+
+    const tauriArgs = ['tauri', 'build', '--bundles', bundleTypes];
+    if (isDebug) tauriArgs.push('--debug');
+    tauriArgs.push(...passthroughArgs);
+
+    const ok = runTauriBuild(tauriArgs);
+    if (!ok) {
+      console.error('\n❌ Linux build failed.');
+      buildSuccess = false;
+    } else {
+      const searchDirs = [
+        path.join(REPO_ROOT, 'target', modeDir, 'bundle/deb'),
+        path.join(DESKTOP_DIR, 'src-tauri/target', modeDir, 'bundle/deb'),
+        path.join(REPO_ROOT, 'target', modeDir, 'bundle/appimage'),
+        path.join(DESKTOP_DIR, 'src-tauri/target', modeDir, 'bundle/appimage'),
+      ];
+      const linuxPackages = findArtifacts(searchDirs, (name) => name.toLowerCase().endsWith('.deb') || name.toLowerCase().endsWith('.appimage'));
+      if (linuxPackages.length > 0) {
+        for (const pkg of linuxPackages) {
+          const stats = fs.statSync(pkg);
+          console.log(`  ✓ Linux Package Generated: ${path.basename(pkg)} (${formatBytes(stats.size)})`);
+        }
+      }
+    }
+  }
+}
+
+console.log('\n==================================================');
+if (buildSuccess) {
+  console.log('🎉 Desktop Packaging Finished Successfully!');
+  console.log('To collect all binaries into the unified releases/ directory:');
+  console.log('   npm run package:artifacts');
+} else {
+  console.error('❌ One or more desktop builds encountered errors.');
+  process.exit(1);
+}
+console.log('==================================================\n');
