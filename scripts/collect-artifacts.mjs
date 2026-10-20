@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -147,10 +148,12 @@ for (const iDir of iosSearchDirs) {
   }
 }
 
-// Post-collection Android cleanup of heavy intermediates
+// Post-collection cleanup of disposable intermediate scratch caches
 try {
-  const intermediates = path.join(REPO_ROOT, 'apps/mobile/android/app/build/intermediates');
-  if (fs.existsSync(intermediates)) fs.rmSync(intermediates, { recursive: true, force: true });
+  const pruneScript = path.join(REPO_ROOT, 'scripts/prune-intermediates.mjs');
+  if (fs.existsSync(pruneScript)) {
+    spawnSync('node', [pruneScript], { cwd: REPO_ROOT, stdio: 'inherit' });
+  }
 } catch {}
 
 console.log('');

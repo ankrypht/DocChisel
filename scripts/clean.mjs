@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { execSync } from 'node:child_process';
+import { execSync, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -8,15 +8,25 @@ const __dirname = path.dirname(__filename);
 const REPO_ROOT = path.resolve(__dirname, '..');
 
 const isDeep = process.argv.includes('--deep');
+const isIntermediates = process.argv.includes('--intermediates');
+
+if (isIntermediates) {
+  // Delegate directly to the intermediate pruner
+  const pruneScript = path.join(REPO_ROOT, 'scripts/prune-intermediates.mjs');
+  spawnSync('node', [pruneScript], { cwd: REPO_ROOT, stdio: 'inherit' });
+  process.exit(0);
+}
 
 console.log('==================================================');
 console.log(`🧹 [DocChisel] Cleaning Build Artifacts & Caches ${isDeep ? '(Deep Mode)' : ''}`);
 console.log('==================================================');
 
-function removeSafe(targetPath) {
+function removeSafe(targetPath, description) {
   try {
     if (fs.existsSync(targetPath)) {
       fs.rmSync(targetPath, { recursive: true, force: true });
+      const relative = path.relative(REPO_ROOT, targetPath);
+      console.log(`  ✓ Removed ${description || relative}`);
     }
   } catch {}
 }
@@ -25,9 +35,10 @@ function removeSafe(targetPath) {
 console.log('==> Cleaning Rust build caches...');
 try {
   execSync('cargo clean', { cwd: REPO_ROOT, stdio: 'ignore' });
+  console.log('  ✓ cargo clean completed');
 } catch {
-  removeSafe(path.join(REPO_ROOT, 'target'));
-  removeSafe(path.join(REPO_ROOT, 'apps/desktop/src-tauri/target'));
+  removeSafe(path.join(REPO_ROOT, 'target'), 'Root target directory');
+  removeSafe(path.join(REPO_ROOT, 'apps/desktop/src-tauri/target'), 'Desktop Tauri target directory');
 }
 
 // 2. Android Build Artifacts & Caches
@@ -37,6 +48,7 @@ const androidCleanPaths = [
   path.join(REPO_ROOT, 'apps/mobile/android/build'),
   path.join(REPO_ROOT, 'apps/mobile/modules/docchisel-bridge/android/build'),
   path.join(REPO_ROOT, 'apps/mobile/android/app/.cxx'),
+  path.join(REPO_ROOT, 'apps/mobile/android/.cxx'),
   path.join(REPO_ROOT, 'apps/mobile/android/.gradle'),
   path.join(REPO_ROOT, 'apps/mobile/android/.kotlin'),
 ];
@@ -44,23 +56,65 @@ for (const p of androidCleanPaths) {
   removeSafe(p);
 }
 
-// 3. Vite & Expo Bundler Caches
+// Try stopping any active Gradle daemon to free memory and locks
+try {
+  const gradlew = path.join(REPO_ROOT, 'apps/mobile/android/gradlew');
+  if (fs.existsSync(gradlew)) {
+    execSync('./gradlew --stop', { cwd: path.join(REPO_ROOT, 'apps/mobile/android'), stdio: 'ignore' });
+  }
+} catch {}
+
+// 3. Clean Android native build caches inside node_modules
+const nmDir = path.join(REPO_ROOT, 'node_modules');
+if (fs.existsSync(nmDir)) {
+  try {
+    const pkgs = fs.readdirSync(nmDir);
+    for (const pkg of pkgs) {
+      const pkgPath = path.join(nmDir, pkg);
+      if (pkg.startsWith('@')) {
+        try {
+          const subPkgs = fs.readdirSync(pkgPath);
+          for (const sub of subPkgs) {
+            cleanModuleAndroid(path.join(pkgPath, sub));
+          }
+        } catch {}
+      } else {
+        cleanModuleAndroid(pkgPath);
+      }
+    }
+  } catch {}
+}
+
+function cleanModuleAndroid(moduleDir) {
+  const androidBuild = path.join(moduleDir, 'android/build');
+  const androidCxx = path.join(moduleDir, 'android/.cxx');
+  if (fs.existsSync(androidBuild)) removeSafe(androidBuild, `${path.relative(REPO_ROOT, moduleDir)}/android/build`);
+  if (fs.existsSync(androidCxx)) removeSafe(androidCxx, `${path.relative(REPO_ROOT, moduleDir)}/android/.cxx`);
+}
+
+// 4. iOS Build Artifacts & Intermediates
+console.log('==> Cleaning iOS build artifacts & intermediates...');
+removeSafe(path.join(REPO_ROOT, 'apps/mobile/ios/build'), 'Mobile iOS build directory');
+removeSafe(path.join(REPO_ROOT, 'apps/mobile/ios/DerivedData'), 'Mobile iOS DerivedData');
+
+// 5. Vite & Expo Bundler Caches
 console.log('==> Cleaning Vite & Expo bundler caches...');
 const bundlerPaths = [
   path.join(REPO_ROOT, 'apps/mobile/.expo'),
   path.join(REPO_ROOT, 'apps/desktop/dist'),
   path.join(REPO_ROOT, 'apps/desktop/node_modules/.vite'),
   path.join(REPO_ROOT, 'apps/desktop/node_modules/.vite-temp'),
+  path.join(REPO_ROOT, 'apps/desktop/apps'),
   path.join(REPO_ROOT, '.expo'),
 ];
 for (const p of bundlerPaths) {
   removeSafe(p);
 }
 
-// 4. Deep mode: Clean releases
+// 6. Deep mode: Clean releases directory
 if (isDeep) {
   console.log('==> Deep Mode: Removing releases directory...');
-  removeSafe(path.join(REPO_ROOT, 'releases'));
+  removeSafe(path.join(REPO_ROOT, 'releases'), 'Releases directory');
 }
 
 console.log('\n✅ Cleanup Complete!\n==================================================');

@@ -10,9 +10,9 @@
     "ios": "expo run:ios",
     "ios:release": "expo run:ios --configuration Release",
     "build:apk-debug": "cd android && ./gradlew assembleDebug && ./gradlew --stop",
-    "build:apk-release": "cd android && ./gradlew assembleRelease -PreactNativeArchitectures=armeabi-v7a,arm64-v8a,x86,x86_64 && ./gradlew --stop",
-    "build:bundle": "cd android && ./gradlew bundleRelease -PreactNativeArchitectures=armeabi-v7a,arm64-v8a,x86,x86_64 && ./gradlew --stop",
-    "clean:android": "cd android && ./gradlew clean && ./gradlew --stop && rm -rf app/.cxx app/build .gradle",
+    "build:apk-release": "cd android && ./gradlew assembleRelease -PreactNativeArchitectures=armeabi-v7a,arm64-v8a,x86,x86_64 && ./gradlew --stop && rm -rf app/build/intermediates app/.cxx",
+    "build:bundle": "cd android && ./gradlew bundleRelease -PreactNativeArchitectures=armeabi-v7a,arm64-v8a,x86,x86_64 && ./gradlew --stop && rm -rf app/build/intermediates app/.cxx",
+    "clean:android": "cd android && ./gradlew clean && ./gradlew --stop && rm -rf app/.cxx app/build .gradle .kotlin",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

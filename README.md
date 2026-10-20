@@ -116,15 +116,21 @@ npm run generate:icons
 
 ## 🧹 Maintenance & Cleanup
 
-To purge intermediate build outputs, kill any lingering background Gradle Java daemons, and prune cached native transforms:
+To purge intermediate build outputs, kill lingering background Gradle Java daemons, and manage disk space:
 
 ```bash
-# Standard clean: terminates Gradle daemons, cleans Cargo, Android & Expo caches
+# Instant safe prune: removes disposable intermediate scratchpads (.cxx, Android intermediates,
+# Cargo incremental caches) without deleting built APKs, DMGs, or release binaries
+npm run prune
+# or: npm run clean:intermediates
+
+# Standard clean: terminates Gradle daemons, cleans Cargo target, Android, iOS & Expo caches
 npm run clean
 
-# Deep clean: also purges releases/ and runs npm dedupe
+# Deep clean: also purges the releases/ directory
 npm run clean:deep
 ```
+
 
 ---
 

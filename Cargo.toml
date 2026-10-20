@@ -8,15 +8,23 @@ members = [
 [profile.dev]
 debug = 0
 strip = "debuginfo"
+incremental = false
 
 [profile.dev.package."*"]
 opt-level = 2
 debug = false
 
+[profile.test]
+debug = 0
+incremental = false
+
 [profile.release]
 opt-level = "z"
-lto = "fat"
+lto = "thin"
 codegen-units = 1
 panic = "abort"
 strip = "symbols"
+debug = 0
+incremental = false
+
 

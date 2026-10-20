@@ -57,6 +57,7 @@ DocChisel/
 │   ├── render-svg-brand.mjs   # Vector Skia renderer translating SVGs to high-DPI bitmaps
 │   ├── build-mobile-engine.mjs# Cross-platform compiler for Rust core_engine to .so / .a and UniFFI bindings
 │   ├── collect-artifacts.mjs  # Cross-platform collector gathering binaries into /releases
+│   ├── prune-intermediates.mjs# Cross-platform disposable intermediate cache pruner
 │   └── clean.mjs              # Cross-platform deep cleaner for build caches and temp files
 └── releases/             # Unified destination for all production binaries (.apk, .aab, .dmg, .exe)
 ```
@@ -281,13 +282,14 @@ All production builds can be run directly from the workspace root. After buildin
 
 ### 1. Android Production Builds (APK & .AAB)
 
-#### Step A: Compile the Multi-Architecture Release Engine
+#### Step A: Compile the Android Multi-Architecture Release Engine
 
-Builds 16 KB page-size aligned `.so` libraries for `arm64-v8a`, `armeabi-v7a`, and `x86_64`:
+Builds 16 KB page-size aligned `.so` libraries specifically for Android (`arm64-v8a`, `armeabi-v7a`, and `x86_64`) without redundantly building iOS:
 
 ```bash
-npm run mobile:build-engine:release
+npm run mobile:build-engine:android:release
 ```
+
 
 #### Step B1: Build Android Release APK (`.apk`)
 
@@ -373,8 +375,8 @@ npm run desktop:package:windows
 _(Run on macOS with Xcode)_
 
 ```bash
-# Step 1: Compile iOS native engine in release mode
-npm run mobile:build-engine:release
+# Step 1: Compile iOS native engine in release mode (without compiling Android ABIs)
+npm run mobile:build-engine:ios:release
 
 # Step 2: Build iOS release
 npm run mobile:ios:release
@@ -452,17 +454,24 @@ npm run package:artifacts
 
 The following root npm scripts allow you to build **and** automatically collect your binaries in a single command:
 
-| Command                         | Action                                               | Output in `releases/`              |
-| :------------------------------ | :--------------------------------------------------- | :--------------------------------- |
-| `npm run package:android`       | Builds release engine + APK + `.aab` + collects      | `releases/android/*.apk` & `*.aab` |
-| `npm run package:android:apk`   | Builds release engine + Release APK + collects       | `releases/android/*.apk`           |
-| `npm run package:android:aab`   | Builds release engine + Release `.aab` + collects    | `releases/android/*.aab`           |
-| `npm run package:mac`           | Builds macOS DMG & App bundle + collects             | `releases/macos/*.dmg` & `.app`    |
-| `npm run package:mac-universal` | Builds Universal macOS bundle + collects             | `releases/macos/*.dmg` & `.app`    |
-| `npm run package:windows`       | Builds Windows MSI & EXE installer + collects        | `releases/windows/*.msi` & `*.exe` |
-| `npm run package:ios`           | Builds release engine + iOS release + collects       | `releases/ios/*.ipa`               |
-| `npm run package:artifacts`     | Gathers any existing built binaries into `releases/` | `releases/<platform>/`             |
-| `npm run generate:icons`        | Compiles brand SVGs into all platform icons & splash | `apps/*/icons/` & `res/mipmap-*/`  |
+| Command                                 | Action                                               | Output in `releases/`              |
+| :-------------------------------------- | :--------------------------------------------------- | :--------------------------------- |
+| `npm run package:android`               | Builds Android engine + APK + `.aab` + collects      | `releases/android/*.apk` & `*.aab` |
+| `npm run package:android:apk`           | Builds Android engine + Release APK + collects       | `releases/android/*.apk`           |
+| `npm run package:android:aab`           | Builds Android engine + Release `.aab` + collects    | `releases/android/*.aab`           |
+| `npm run package:mac`                   | Builds macOS DMG & App bundle + collects             | `releases/macos/*.dmg` & `.app`    |
+| `npm run package:mac-universal`         | Builds Universal macOS bundle + collects             | `releases/macos/*.dmg` & `.app`    |
+| `npm run package:windows`               | Builds Windows MSI & EXE installer + collects        | `releases/windows/*.msi` & `*.exe` |
+| `npm run package:ios`                   | Builds iOS engine + iOS release + collects           | `releases/ios/*.ipa`               |
+| `npm run package:artifacts`             | Gathers any existing built binaries into `releases/` | `releases/<platform>/`             |
+| `npm run prune`                         | Safely purges intermediate scratchpads (.cxx, etc.)  | Reclaims 5–15 GB build cache       |
+| `npm run clean:intermediates`           | Alias for `npm run prune`                            | Reclaims 5–15 GB build cache       |
+| `npm run clean`                         | Full reset: runs `cargo clean` and wipes caches      | Clean workspace                    |
+| `npm run clean:deep`                    | Deep reset: wipes caches plus `releases/` folder     | Pristine repository                |
+| `npm run mobile:build-engine:android:release` | Compiles release engine for Android targets only | `docchisel-bridge/.../jniLibs`     |
+| `npm run mobile:build-engine:ios:release`     | Compiles release engine for iOS simulator/device | `docchisel-bridge/.../libcore_engine.a` |
+| `npm run generate:icons`                | Compiles brand SVGs into all platform icons & splash | `apps/*/icons/` & `res/mipmap-*/`  |
+
 
 ---
 
@@ -493,20 +502,35 @@ If Android compilation fails due to missing standard libraries:
 rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android
 ```
 
-### 4. Cleaning build caches
+### 4. Managing Disk Space & Preventing Build Bloat
 
-If Gradle or Cargo get into an inconsistent state after updating dependencies, run the workspace cleanup script:
+Cross-platform builds (especially compiling multiple native Rust targets and React Native C++ modules across multiple ABIs) can generate gigabytes of intermediate scratchpads. DocChisel provides a 3-tier cleanup strategy:
 
+1. **Instant Safe Prune (`npm run prune` or `npm run clean:intermediates`):**
+   - **What it does:** Safely deletes disposable intermediate scratchpads without touching your release outputs:
+     - Android `app/build/intermediates` (unstripped native libraries and temporary dex files)
+     - CMake/Ninja build trees (`app/.cxx` and `node_modules/**/android/.cxx`)
+     - Native C++ builds inside `node_modules/**/android/build`
+     - Cargo incremental caches (`target/*/incremental`)
+     - iOS DerivedData and mobile/desktop temporary bundler caches
+   - **When to use:** Anytime disk space feels tight or after running multiple builds. Reclaims **5–15 GB** instantly while keeping all built `.apk`, `.aab`, `.dmg`, `.exe`, and `.so` files intact.
+
+2. **Standard Clean (`npm run clean`):**
+   - **What it does:** Runs `cargo clean`, terminates any active background Gradle daemons (`./gradlew --stop`), removes Android/iOS build directories, and clears bundler caches.
+   - **When to use:** When switching branches, updating core engine dependencies, or troubleshooting compiler errors.
+
+3. **Deep Clean (`npm run clean:deep`):**
+   - **What it does:** Performs a standard clean plus wipes the root `releases/` directory.
+
+### 5. Fast Local Mobile Development Tip
+
+To avoid compiling all 4 target architectures during local mobile feature development:
 ```bash
-# Standard clean: terminates hanging Gradle Java daemons, clears Cargo target,
-# Android Gradle build outputs, Expo/Vite caches, and pruned ~/.gradle transforms
-npm run clean
-
-# Deep clean: also purges node_modules and deep caches
-npm run clean:deep
+# Compiles only arm64-v8a in dev mode (~1.5 GB in target/ instead of 9+ GB)
+npm run mobile:build-engine
 ```
+When ready for production packaging, use the targeted packaging scripts (`npm run package:android` or `npm run package:ios`), which only compile the architectures required for that specific platform.
 
-`npm run clean` automatically runs `./gradlew --stop` to kill background `GradleDaemon` and `KotlinCompileDaemon` processes holding onto RAM, and prunes bloated `~/.gradle/caches/transforms-*` and daemon logs to reclaim gigabytes of disk space.
 
 ---
 
