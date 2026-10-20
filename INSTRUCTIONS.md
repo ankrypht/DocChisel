@@ -5,7 +5,7 @@ This document provides a comprehensive, step-by-step guide for anyone cloning th
 - System prerequisites for every target platform
 - Initial workspace installation and verification
 - Testing and hot-reload development servers (Desktop, Android, and future iOS)
-- Building production binaries for supported operating systems (**Android APK & `.aab`**, **macOS DMG & `.app`**, **Windows `.msi` & `.exe`**, and optional **iOS**)
+- Building production binaries for supported operating systems (**Android APK & `.aab`**, **macOS DMG & `.app`**, **Windows `.msi` & `.exe`**, **Linux `.deb` & `.AppImage`**, and optional **iOS**)
 - Automatic collection of all final release binaries into a unified root directory: `releases/`
 
 ---
@@ -17,10 +17,11 @@ This document provides a comprehensive, step-by-step guide for anyone cloning th
    - [Common Tooling](#1-common-tooling-all-platforms)
    - [macOS & iOS Tooling](#2-macos--ios-tooling-apple-silicon--intel)
    - [Windows Desktop Tooling](#3-windows-desktop-tooling)
-   - [Android Tooling](#4-android-tooling-apk--aab-on-macos-windows-or-linux)
+   - [Linux Desktop Tooling](#4-linux-desktop-tooling-ubuntudebian-fedora-arch-linux-opensuse)
+   - [Android Tooling](#5-android-tooling-apk--aab-on-macos-windows-or-linux)
 3. [Initial Repository Setup](#-initial-repository-setup)
 4. [Testing & Hot-Reload Development](#-testing--hot-reload-development)
-   - [Desktop App (macOS & Windows)](#1-desktop-app-development-with-hot-reload)
+   - [Desktop App (macOS, Windows & Linux)](#1-desktop-app-development-with-hot-reload)
    - [Android App (Emulator or Device)](#2-android-app-development-with-hot-reload)
    - [iOS App (Optional / Untested)](#3-ios-app-development-optional--untested)
    - [Rust Core Engine Tests](#4-rust-core-engine-tests)
@@ -29,7 +30,8 @@ This document provides a comprehensive, step-by-step guide for anyone cloning th
    - [Android: Release APK and Google Play .aab](#1-android-production-builds-apk--aab)
    - [macOS Desktop: DMG and .app](#2-macos-desktop-builds-dmg--app)
    - [Windows Desktop: MSI and Setup .exe](#3-windows-desktop-builds-msi--exe)
-   - [iOS Mobile: Release Bundle (Optional / Untested)](#4-ios-mobile-builds-optional--untested)
+   - [Linux Desktop: DEB, AppImage and RPM](#4-linux-desktop-builds-deb-appimage--rpm)
+   - [iOS Mobile: Release Bundle (Optional / Untested)](#5-ios-mobile-builds-optional--untested)
 6. [Brand Assets & Icon Generation Pipeline](#-brand-assets--icon-generation-pipeline)
 7. [Unified Artifact Collection (`releases/`)](#-unified-artifact-collection-releases)
 8. [Convenience Scripts Cheat Sheet](#-convenience-scripts-cheat-sheet)
@@ -127,7 +129,88 @@ Required for building Windows `.msi` and `.exe` installers:
 
 ---
 
-### 4. Android Tooling (APK & .AAB on macOS, Windows, or Linux)
+### 4. Linux Desktop Tooling (Ubuntu/Debian, Fedora, Arch Linux, openSUSE)
+
+Required for developing, compiling, and packaging Linux desktop applications (`.deb`, `.AppImage`, and `.rpm`):
+
+1. **System & WebKitGTK Dependencies**:
+   Install the required system C libraries, GTK3, WebKit2GTK 4.1, and `pkg-config` using your distribution's package manager:
+
+   - **Debian / Ubuntu (22.04 LTS, 24.04 LTS+)**:
+     ```bash
+     sudo apt update
+     sudo apt install -y libwebkit2gtk-4.1-dev \
+       build-essential \
+       curl \
+       wget \
+       file \
+       libxdo-dev \
+       libssl-dev \
+       libayatana-appindicator3-dev \
+       librsvg2-dev \
+       pkg-config
+     ```
+
+   - **Fedora**:
+     ```bash
+     sudo dnf check-update
+     sudo dnf install -y webkit2gtk4.1-devel \
+       openssl-devel \
+       curl \
+       wget \
+       file \
+       libappindicator-gtk3-devel \
+       librsvg2-devel \
+       libxdo-devel \
+       pkg-config
+     sudo dnf group install -y "c-development"
+     ```
+
+   - **Arch Linux / Manjaro**:
+     ```bash
+     sudo pacman -Syu
+     sudo pacman -S --needed \
+       webkit2gtk-4.1 \
+       base-devel \
+       curl \
+       wget \
+       file \
+       openssl \
+       appmenu-gtk-module \
+       libappindicator-gtk3 \
+       librsvg \
+       xdotool \
+       pkgconf
+     ```
+
+   - **openSUSE**:
+     ```bash
+     sudo zypper refresh
+     sudo zypper install -y webkit2gtk3-devel \
+       openssl-devel \
+       curl \
+       wget \
+       file \
+       libayatana-appindicator3-1 \
+       librsvg2-devel \
+       libxdo-dev \
+       pkg-config
+     ```
+
+2. **FUSE Runtime (Required for AppImages on Ubuntu 22.04+)**:
+   ```bash
+   sudo apt install -y libfuse2
+   ```
+
+3. **Rust Linux Target**:
+   ```bash
+   # Standard native Linux target
+   rustup default stable
+   ```
+
+---
+
+### 5. Android Tooling (APK & .AAB on macOS, Windows, or Linux)
 
 Required for building Android debug/release APKs and Google Play `.aab` bundles:
 
@@ -373,7 +456,51 @@ npm run desktop:package:windows
 
 ---
 
-### 4. iOS Mobile Builds (Optional / Untested)
+### 4. Linux Desktop Builds (DEB, AppImage & RPM)
+
+_(Run on Linux or in a Linux container/VM with Tauri dependencies installed)_
+
+#### Build All Linux Packages (.deb + .AppImage):
+
+```bash
+npm run desktop:package:linux
+```
+
+- **Output locations**:
+  - Debian Package: `target/release/bundle/deb/DocChisel_0.1.0_amd64.deb` (or `arm64`)
+  - AppImage: `target/release/bundle/appimage/DocChisel_0.1.0_amd64.AppImage`
+
+#### Build Specific Linux Package Formats:
+
+```bash
+# Build Debian (.deb) package only
+npm run desktop:package:linux:deb
+
+# Build standalone AppImage only
+npm run desktop:package:linux:appimage
+
+# Build Red Hat (.rpm) package (requires rpm-build or rpmbuild installed)
+npm run desktop:package:linux:rpm
+```
+
+#### Running & Installing on Linux:
+
+- **Standalone AppImage**:
+  ```bash
+  chmod +x target/release/bundle/appimage/DocChisel_*.AppImage
+  ./target/release/bundle/appimage/DocChisel_*.AppImage
+  ```
+- **Debian / Ubuntu Package**:
+  ```bash
+  # Install directly with apt to resolve any system dependencies automatically:
+  sudo apt install ./target/release/bundle/deb/DocChisel_*_amd64.deb
+  # Or via dpkg:
+  sudo dpkg -i target/release/bundle/deb/DocChisel_*_amd64.deb
+  ```
+
+---
+
+### 5. iOS Mobile Builds (Optional / Untested)
 
 > [!NOTE]
 > **Status: Untested & Unreleased**: iOS release packaging is preserved as a future option, but is currently untested and deferred until an Apple Developer subscription is active.
@@ -448,6 +575,9 @@ npm run package:artifacts
    ├── windows/
    │   ├── DocChisel_0.1.0_x64-setup.exe
    │   └── DocChisel_0.1.0_x64_en-US.msi
+   ├── linux/
+   │   ├── DocChisel_0.1.0_amd64.deb
+   │   └── DocChisel_0.1.0_amd64.AppImage
    └── ios/
        └── DocChisel.ipa
    ```
@@ -466,8 +596,13 @@ The following root npm scripts provide dedicated, platform-specific commands to 
 | `npm run desktop:package:mac`           | Builds macOS DMG & App bundle                        | `target/.../bundle/macos/`         |
 | `npm run desktop:package:mac-universal` | Builds Universal macOS DMG & App bundle              | `target/.../bundle/macos/`         |
 | `npm run desktop:package:windows`       | Builds Windows MSI & EXE installer                   | `target/.../bundle/msi/` & `nsis/` |
-| `npm run desktop:package:linux`         | Builds Linux DEB / AppImage                          | `target/.../bundle/deb/`           |
-| `npm run desktop:package:all`           | Builds macOS & Windows desktop binaries              | Desktop release bundles            |
+| `npm run desktop:package:linux`         | Builds Linux DEB & AppImage release packages         | `target/.../bundle/deb/` & `appimage/` |
+| `npm run desktop:package:linux:debug`   | Builds Linux unstripped debug packages               | `target/.../bundle/deb/` & `appimage/` |
+| `npm run desktop:package:linux:deb`     | Builds Linux Debian package (.deb)                   | `target/.../bundle/deb/`           |
+| `npm run desktop:package:linux:appimage`| Builds Linux standalone AppImage                     | `target/.../bundle/appimage/`      |
+| `npm run desktop:package:linux:rpm`     | Builds Linux Red Hat RPM package                     | `target/.../bundle/rpm/`           |
+| `npm run desktop:package:all`           | Builds host desktop release bundles                  | Desktop release bundles            |
+| `npm run desktop:test`                  | Runs Desktop Tauri backend unit test suite           | Rust test runner                   |
 | **Mobile Builds**                       |                                                      |                                    |
 | `npm run mobile:build:apk-debug`        | Compiles Android debug APK                           | `apps/mobile/.../apk/debug/`       |
 | `npm run mobile:build:apk-release`      | Compiles multi-architecture Android release APK      | `apps/mobile/.../apk/release/`     |
@@ -543,14 +678,44 @@ Cross-platform builds (especially compiling multiple native Rust targets and Rea
 3. **Deep Clean (`npm run clean:deep`):**
    - **What it does:** Performs a standard clean plus wipes the root `releases/` directory.
 
-### 5. Fast Local Mobile Development Tip
+### 5. Linux Desktop Build & Runtime Issues
+
+#### A. Missing WebKit2GTK or `pkg-config` during `cargo build`
+If you encounter `pkg-config: "webkit2gtk-4.1" not found` or `failed to run custom build command for tauri`:
+```bash
+# Ubuntu / Debian
+sudo apt update && sudo apt install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev pkg-config
+
+# Fedora
+sudo dnf install -y webkit2gtk4.1-devel libappindicator-gtk3-devel pkg-config
+
+# Arch Linux
+sudo pacman -S --needed webkit2gtk-4.1 libappindicator-gtk3 pkgconf
+```
+
+#### B. AppImage fails to launch with FUSE error (`libfuse.so.2`)
+Ubuntu 22.04+ and Debian 12 no longer include FUSE v2 by default:
+```bash
+sudo apt install -y libfuse2
+# Or run without FUSE:
+./DocChisel_0.1.0_amd64.AppImage --appimage-extract-and-run
+```
+
+#### C. WebKitGTK White Screen or Crash in Virtual Machines / WSLg
+In virtualized Linux environments without OpenGL/GPU hardware acceleration, WebKitGTK's hardware compositing mode can cause blank windows. Disable compositing mode via environment variable:
+```bash
+export WEBKIT_DISABLE_COMPOSITING_MODE=1
+npm run desktop:dev
+```
+
+### 6. Fast Local Mobile Development Tip
 
 To avoid compiling all 4 target architectures during local mobile feature development:
 ```bash
 # Compiles only arm64-v8a in dev mode (~1.5 GB in target/ instead of 9+ GB, skips iOS completely)
 npm run mobile:build-engine:android
 ```
-When ready for production packaging, compile your platform directly (e.g. `npm run mobile:build:apk-release` or `npm run desktop:package:mac` / `npm run desktop:package:windows`), then run `npm run package:artifacts` to gather all binaries into `releases/`. Note that iOS is currently untested and not released pending App Store fees, though `npm run mobile:build-engine:ios` and `npm run mobile:ios:release` remain ready for future activation.
+When ready for production packaging, compile your platform directly (e.g. `npm run mobile:build:apk-release`, `npm run desktop:package:linux`, or `npm run desktop:package:mac` / `npm run desktop:package:windows`), then run `npm run package:artifacts` to gather all binaries into `releases/`. Note that iOS is currently untested and not released pending App Store fees, though `npm run mobile:build-engine:ios` and `npm run mobile:ios:release` remain ready for future activation.
 
 
 ---

@@ -51,13 +51,27 @@ DocChisel/
 ## 🚀 Getting Started
 
 > [!TIP]
-> **Complete Build, Test & Packaging Guide**: See [INSTRUCTIONS.md](INSTRUCTIONS.md) for step-by-step setup, hot-reload dev servers, building Android APK & Google Play `.aab`, macOS DMG, Windows MSI/EXE, and exporting all release binaries to the unified `releases/` directory.
+> **Complete Build, Test & Packaging Guide**: See [INSTRUCTIONS.md](INSTRUCTIONS.md) for step-by-step setup, hot-reload dev servers, building Android APK & Google Play `.aab`, macOS DMG, Windows MSI/EXE, Linux DEB & AppImage, and exporting all release binaries to the unified `releases/` directory.
 
 ### Prerequisites
 
 - [Node.js](https://nodejs.org/) (v20+)
 - [Rust](https://rustup.rs/) (v1.75+)
-- For Desktop builds: [Tauri Prerequisites](https://v2.tauri.app/start/prerequisites/) (Windows C++ Build Tools on Windows, Xcode CLI on macOS)
+- For Desktop builds: [Tauri Prerequisites](https://v2.tauri.app/start/prerequisites/)
+  - **Linux (Ubuntu/Debian)**:
+    ```bash
+    sudo apt update && sudo apt install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev pkg-config
+    ```
+  - **Linux (Fedora)**:
+    ```bash
+    sudo dnf install webkit2gtk4.1-devel openssl-devel curl wget file libappindicator-gtk3-devel librsvg2-devel libxdo-devel && sudo dnf group install "c-development"
+    ```
+  - **Linux (Arch Linux)**:
+    ```bash
+    sudo pacman -S --needed webkit2gtk-4.1 base-devel curl wget file openssl appmenu-gtk-module libappindicator-gtk3 librsvg xdotool
+    ```
+  - **macOS**: Xcode Command Line Tools (`xcode-select --install`)
+  - **Windows**: Visual Studio 2022 C++ Build Tools (Desktop development with C++) and WebView2
 - For Mobile builds: Android Studio, Android SDK / NDK, and [cargo-ndk](https://github.com/bbqsrc/cargo-ndk) (for Android NDK compilation). Xcode is optional and only required if building for iOS in the future.
 
 > [!NOTE]
@@ -77,7 +91,31 @@ npm install
 ### Running the Desktop App
 
 ```bash
+# Start Tauri desktop app with hot-reload (macOS, Windows, or Linux)
 npm run desktop:dev
+
+# Or run frontend-only preview in browser
+npm run desktop:dev:web
+```
+
+### Packaging Desktop Apps
+
+```bash
+# Linux: Build Debian package (.deb) and AppImage
+npm run desktop:package:linux
+# Or build specific formats:
+# npm run desktop:package:linux:deb
+# npm run desktop:package:linux:appimage
+# npm run desktop:package:linux:rpm
+
+# macOS: Build DMG installer & .app bundle
+npm run desktop:package:mac
+
+# Windows: Build MSI & NSIS Setup (.exe)
+npm run desktop:package:windows
+
+# Collect all built binaries into the unified releases/ directory
+npm run package:artifacts
 ```
 
 ### Running the Mobile App

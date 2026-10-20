@@ -60,7 +60,8 @@ for (const p of androidCleanPaths) {
 try {
   const gradlew = path.join(REPO_ROOT, 'apps/mobile/android/gradlew');
   if (fs.existsSync(gradlew)) {
-    execSync('./gradlew --stop', { cwd: path.join(REPO_ROOT, 'apps/mobile/android'), stdio: 'ignore' });
+    const gradlewCmd = process.platform === 'win32' ? 'gradlew.bat --stop' : './gradlew --stop';
+    execSync(gradlewCmd, { cwd: path.join(REPO_ROOT, 'apps/mobile/android'), stdio: 'ignore' });
   }
 } catch {}
 
@@ -101,9 +102,11 @@ removeSafe(path.join(REPO_ROOT, 'apps/mobile/modules/docchisel-bridge/ios/libcor
 removeSafe(path.join(REPO_ROOT, 'target/aarch64-apple-ios-sim'), 'iOS simulator Rust build cache');
 removeSafe(path.join(REPO_ROOT, 'target/aarch64-apple-ios'), 'iOS device Rust build cache');
 removeSafe(path.join(REPO_ROOT, 'target/x86_64-apple-ios'), 'iOS x86_64 Rust build cache');
-const iosReleasesDir = path.join(REPO_ROOT, 'releases/ios');
-if (fs.existsSync(iosReleasesDir) && fs.readdirSync(iosReleasesDir).length === 0) {
-  removeSafe(iosReleasesDir, 'Empty releases/ios directory');
+for (const plat of ['android', 'macos', 'windows', 'linux', 'ios']) {
+  const platReleasesDir = path.join(REPO_ROOT, 'releases', plat);
+  if (fs.existsSync(platReleasesDir) && fs.readdirSync(platReleasesDir).length === 0) {
+    removeSafe(platReleasesDir, `Empty releases/${plat} directory`);
+  }
 }
 
 // 5. Vite & Expo Bundler Caches

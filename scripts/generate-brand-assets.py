@@ -1,6 +1,6 @@
-#!/usr/bin/env python3
 import os
 import sys
+import shutil
 import subprocess
 from PIL import Image, ImageDraw
 
@@ -59,14 +59,34 @@ def run():
     desktop_icon_png = os.path.join(DESKTOP_ICONS_DIR, 'icon.png')
     desktop_master.save(desktop_icon_png, format='PNG')
 
-    tauri_cli = os.path.join(ROOT, 'apps/desktop/node_modules/.bin/tauri')
-    cmd = [tauri_cli if os.path.exists(tauri_cli) else 'tauri', 'icon', desktop_icon_png, '-o', DESKTOP_ICONS_DIR]
+    # Locate Tauri CLI (hoisted in monorepo root or in desktop workspace)
+    tauri_candidates = [
+        os.path.join(ROOT, 'node_modules/.bin/tauri.cmd' if sys.platform == 'win32' else 'node_modules/.bin/tauri'),
+        os.path.join(ROOT, 'node_modules/.bin/tauri'),
+        os.path.join(ROOT, 'apps/desktop/node_modules/.bin/tauri.cmd' if sys.platform == 'win32' else 'apps/desktop/node_modules/.bin/tauri'),
+        os.path.join(ROOT, 'apps/desktop/node_modules/.bin/tauri'),
+    ]
+    tauri_bin = None
+    for cand in tauri_candidates:
+        if os.path.exists(cand):
+            tauri_bin = cand
+            break
+
+    if not tauri_bin:
+        tauri_bin = shutil.which('tauri')
+
+    if tauri_bin:
+        cmd = [tauri_bin, 'icon', desktop_icon_png, '-o', DESKTOP_ICONS_DIR]
+    else:
+        npx_bin = 'npx.cmd' if sys.platform == 'win32' else 'npx'
+        cmd = [npx_bin, 'tauri', 'icon', desktop_icon_png, '-o', DESKTOP_ICONS_DIR]
+
     subprocess.run(cmd, cwd=os.path.join(ROOT, 'apps/desktop'), check=True)
     # Clean temporary directories produced by tauri icon
     for extra in ['android', 'ios']:
         extra_dir = os.path.join(DESKTOP_ICONS_DIR, extra)
         if os.path.exists(extra_dir):
-            subprocess.run(['rm', '-rf', extra_dir])
+            shutil.rmtree(extra_dir, ignore_errors=True)
 
     # 3. Update Mobile assets
     print('2. Generating Expo Mobile Assets (iOS 24-bit RGB, Android Adaptive, Splash)...')

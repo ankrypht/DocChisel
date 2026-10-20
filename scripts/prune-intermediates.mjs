@@ -148,9 +148,11 @@ removeDirectory(
   path.join(REPO_ROOT, 'target/x86_64-apple-ios'),
   'iOS x86_64 Rust target cache'
 );
-const emptyIosReleases = path.join(REPO_ROOT, 'releases/ios');
-if (fs.existsSync(emptyIosReleases) && fs.readdirSync(emptyIosReleases).length === 0) {
-  removeDirectory(emptyIosReleases, 'Empty releases/ios folder');
+for (const plat of ['android', 'macos', 'windows', 'linux', 'ios']) {
+  const emptyPlatReleases = path.join(REPO_ROOT, 'releases', plat);
+  if (fs.existsSync(emptyPlatReleases) && fs.readdirSync(emptyPlatReleases).length === 0) {
+    removeDirectory(emptyPlatReleases, `Empty releases/${plat} folder`);
+  }
 }
 
 // 4. Vite & Bundler Disposable Temp Files

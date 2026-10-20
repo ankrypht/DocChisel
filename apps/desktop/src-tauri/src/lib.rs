@@ -75,3 +75,39 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running docchisel desktop application");
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_default_output_dir() {
+        let dir = get_default_output_dir();
+        assert!(!dir.is_empty(), "Default output dir should not be empty");
+        assert!(
+            dir.ends_with("DocChisel") || dir.ends_with("DocChisel_Output"),
+            "Default output dir should end with DocChisel, got: {}",
+            dir
+        );
+    }
+
+    #[test]
+    fn test_run_job_invalid_payload() {
+        let rt = tokio::runtime::Runtime::new().expect("Failed to create tokio runtime");
+        let result = rt.block_on(run_job("invalid json".to_string()));
+        assert!(result.is_ok(), "run_job should return Result with JSON error");
+        let res_str = result.unwrap();
+        assert!(
+            res_str.contains("\"success\":false") || res_str.contains("error"),
+            "Response should indicate failure: {}",
+            res_str
+        );
+    }
+
+    #[test]
+    fn test_get_pdf_page_count_nonexistent() {
+        let result = get_pdf_page_count("/path/to/nonexistent/docchisel_test.pdf".to_string());
+        assert!(result.is_err(), "Should return error for nonexistent file");
+    }
+}
+
