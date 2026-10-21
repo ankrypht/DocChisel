@@ -23,5 +23,6 @@ export default defineConfig({
     cssMinify: true,
     sourcemap: !!process.env.TAURI_ENV_DEBUG,
     reportCompressedSize: false,
+    chunkSizeWarningLimit: 2000,
   },
 });

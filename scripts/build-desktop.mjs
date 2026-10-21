@@ -309,6 +309,13 @@ if (isWindows || isAll) {
     }
     console.log(`  ✓ Configured CFLAGS="${env.CFLAGS}" for clang-cl MSVC target`);
 
+    // Suppress LNK4099 debug info warnings for MSVC CRT static libraries in lld-link
+    const requiredRustflag = '-C link-arg=/ignore:4099';
+    if (!env.RUSTFLAGS || !env.RUSTFLAGS.includes(requiredRustflag)) {
+      env.RUSTFLAGS = env.RUSTFLAGS ? `${env.RUSTFLAGS} ${requiredRustflag}` : requiredRustflag;
+    }
+    console.log(`  ✓ Configured RUSTFLAGS="${env.RUSTFLAGS}" for lld-link MSVC target`);
+
     // Execute Tauri build with cargo-xwin
     const tauriArgs = [
       'tauri',
