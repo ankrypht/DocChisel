@@ -200,12 +200,15 @@ npm run check:all
      sudo apt install -y \
        libwebkit2gtk-4.1-dev \
        libgtk-3-dev \
+       libgtk-3-bin \
+       libglib2.0-bin \
        build-essential \
        curl \
        wget \
        file \
        libssl-dev \
        librsvg2-dev \
+       librsvg2-common \
        pkg-config \
        patchelf \
        libfuse2
@@ -261,8 +264,8 @@ npm run check:all
      # Install host target (auto-installed by rustup)
      # For cross-compiling or building across architectures on Linux:
      rustup target add x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu i686-unknown-linux-gnu armv7-unknown-linux-gnueabihf
-     # (Optional: for 32-bit x86 builds on 64-bit Ubuntu/Debian):
-     # sudo dpkg --add-architecture i386 && sudo apt install -y gcc-multilib g++-multilib
+     # (Optional: for local 32-bit x86 builds on 64-bit Ubuntu/Debian):
+     # sudo dpkg --add-architecture i386 && sudo apt install -y gcc-multilib g++-multilib libwebkit2gtk-4.1-dev:i386 libgtk-3-dev:i386 librsvg2-dev:i386 librsvg2-common:i386 libssl-dev:i386
      ```
 2. **Android Development Tools**:
    - Install [Android Studio for Linux](https://developer.android.com/studio).

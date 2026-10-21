@@ -126,11 +126,11 @@ npm run check:all
   rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android
   ```
 
-### 3. Linux Development Host (Ubuntu/Debian, Fedora, Arch)
+### 3. Linux Development Host (Ubuntu/Debian, Fedora, Arch, openSUSE)
 - **WebKit2GTK & Desktop Libraries**:
   - **Ubuntu / Debian**:
     ```bash
-    sudo apt update && sudo apt install -y libwebkit2gtk-4.1-dev libgtk-3-dev build-essential curl wget file libssl-dev librsvg2-dev pkg-config patchelf libfuse2
+    sudo apt update && sudo apt install -y libwebkit2gtk-4.1-dev libgtk-3-dev libgtk-3-bin libglib2.0-bin build-essential curl wget file libssl-dev librsvg2-dev librsvg2-common pkg-config patchelf libfuse2
     ```
   - **Fedora**:
     ```bash
@@ -147,8 +147,8 @@ npm run check:all
 - **Rust Linux Targets (64-bit and 32-bit AMD & ARM)**:
   ```bash
   rustup target add x86_64-unknown-linux-gnu i686-unknown-linux-gnu aarch64-unknown-linux-gnu armv7-unknown-linux-gnueabihf
-  # (Optional: for 32-bit x86 cross-compilation on 64-bit Ubuntu/Debian):
-  # sudo apt install -y gcc-multilib g++-multilib
+  # (Optional: for local 32-bit x86 builds on 64-bit Ubuntu/Debian):
+  # sudo dpkg --add-architecture i386 && sudo apt install -y gcc-multilib g++-multilib libwebkit2gtk-4.1-dev:i386 libgtk-3-dev:i386 librsvg2-dev:i386 librsvg2-common:i386 libssl-dev:i386
   ```
 - **For Android Development**: Install [Android Studio for Linux](https://developer.android.com/studio), configure `ANDROID_HOME`, and install `cargo-ndk`:
   ```bash
