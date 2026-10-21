@@ -60,7 +60,7 @@ DocChisel is engineered to run and build natively on developer workstations with
 The following steps are identical across **macOS**, **Windows**, and **Linux**:
 
 ### 1. Install Common System Tools
-- **Node.js**: Install Node.js LTS (`v20.x` or `v24.x`) from [nodejs.org](https://nodejs.org/).
+- **Node.js**: Install Node.js LTS (`v24.x+`) from [nodejs.org](https://nodejs.org/).
 - **Rust**: Install Rust via [rustup.rs](https://rustup.rs/):
   ```bash
   # macOS / Linux

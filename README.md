@@ -73,7 +73,7 @@ DocChisel/
 
 ### Step 1: Install Common Tools
 
-1. **Node.js**: Install Node.js LTS `v20+` (or `v24+`) from [nodejs.org](https://nodejs.org/).
+1. **Node.js**: Install Node.js LTS `v24+` from [nodejs.org](https://nodejs.org/).
 2. **Rust**: Install Rust via [rustup.rs](https://rustup.rs/).
 
 ```bash
