@@ -476,6 +476,13 @@ if (isLinux || (isAll && process.platform === 'linux')) {
         if (!buildEnv.PKG_CONFIG_PATH && fs.existsSync('/usr/lib/i386-linux-gnu/pkgconfig')) {
           buildEnv.PKG_CONFIG_PATH = '/usr/lib/i386-linux-gnu/pkgconfig:/usr/share/pkgconfig';
         }
+        if (!buildEnv.LD_GTK_LIBRARY_PATH && fs.existsSync('/usr/lib/i386-linux-gnu')) {
+          buildEnv.LD_GTK_LIBRARY_PATH = '/usr/lib/i386-linux-gnu';
+          console.log(`  ✓ Configured LD_GTK_LIBRARY_PATH="${buildEnv.LD_GTK_LIBRARY_PATH}" for linuxdeploy`);
+        }
+        if (!buildEnv.NO_STRIP) {
+          buildEnv.NO_STRIP = 'true';
+        }
         if (!buildEnv.CC_i686_unknown_linux_gnu && commandExists('gcc')) {
           buildEnv.CC_i686_unknown_linux_gnu = 'gcc';
         }
@@ -489,6 +496,13 @@ if (isLinux || (isAll && process.platform === 'linux')) {
         buildEnv.PKG_CONFIG_ALLOW_CROSS = '1';
         if (!buildEnv.PKG_CONFIG_PATH && fs.existsSync('/usr/lib/arm-linux-gnueabihf/pkgconfig')) {
           buildEnv.PKG_CONFIG_PATH = '/usr/lib/arm-linux-gnueabihf/pkgconfig:/usr/share/pkgconfig';
+        }
+        if (!buildEnv.LD_GTK_LIBRARY_PATH && fs.existsSync('/usr/lib/arm-linux-gnueabihf')) {
+          buildEnv.LD_GTK_LIBRARY_PATH = '/usr/lib/arm-linux-gnueabihf';
+          console.log(`  ✓ Configured LD_GTK_LIBRARY_PATH="${buildEnv.LD_GTK_LIBRARY_PATH}" for linuxdeploy`);
+        }
+        if (!buildEnv.NO_STRIP) {
+          buildEnv.NO_STRIP = 'true';
         }
         if (!buildEnv.CARGO_TARGET_ARMV7_UNKNOWN_LINUX_GNUEABIHF_LINKER && commandExists('arm-linux-gnueabihf-gcc')) {
           buildEnv.CARGO_TARGET_ARMV7_UNKNOWN_LINUX_GNUEABIHF_LINKER = 'arm-linux-gnueabihf-gcc';
