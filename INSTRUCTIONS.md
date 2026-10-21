@@ -197,50 +197,72 @@ npm run check:all
    - **Ubuntu / Debian (22.04 LTS, 24.04 LTS+)**:
      ```bash
      sudo apt update
-     sudo apt install -y libwebkit2gtk-4.1-dev \
+     sudo apt install -y \
+       libwebkit2gtk-4.1-dev \
+       libgtk-3-dev \
        build-essential \
        curl \
        wget \
        file \
-       libxdo-dev \
        libssl-dev \
-       libayatana-appindicator3-dev \
        librsvg2-dev \
        pkg-config \
+       patchelf \
        libfuse2
      ```
-   - **Fedora**:
+   - **Fedora (39, 40, 41+)**:
      ```bash
-     sudo dnf install -y webkit2gtk4.1-devel \
+     sudo dnf install -y \
+       webkit2gtk4.1-devel \
+       gtk3-devel \
        openssl-devel \
        curl \
        wget \
        file \
-       libappindicator-gtk3-devel \
        librsvg2-devel \
-       libxdo-devel \
-       pkg-config
+       pkg-config \
+       patchelf \
+       fuse-libs
      sudo dnf group install -y "c-development"
      ```
    - **Arch Linux / Manjaro**:
      ```bash
-     sudo pacman -S --needed webkit2gtk-4.1 \
+     sudo pacman -S --needed \
+       webkit2gtk-4.1 \
+       gtk3 \
        base-devel \
        curl \
        wget \
        file \
        openssl \
-       appmenu-gtk-module \
-       libappindicator-gtk3 \
        librsvg \
-       xdotool \
-       pkgconf
+       patchelf \
+       pkgconf \
+       fuse2
      ```
-   - **Rust Linux Targets (64-bit & 32-bit AMD and ARM)**:
+   - **openSUSE (Leap / Tumbleweed)**:
      ```bash
-     rustup target add x86_64-unknown-linux-gnu i686-unknown-linux-gnu aarch64-unknown-linux-gnu armv7-unknown-linux-gnueabihf
+     sudo zypper refresh
+     sudo zypper install -y \
+       webkit2gtk4-devel \
+       gtk3-devel \
+       libopenssl-devel \
+       curl \
+       wget \
+       file \
+       librsvg-devel \
+       pkg-config \
+       patchelf \
+       libfuse2
+     sudo zypper install -t pattern devel_basis
+     ```
+   - **Rust Linux Targets**:
+     ```bash
+     # Install host target (auto-installed by rustup)
+     # For cross-compiling or building across architectures on Linux:
+     rustup target add x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu i686-unknown-linux-gnu armv7-unknown-linux-gnueabihf
      # (Optional: for 32-bit x86 builds on 64-bit Ubuntu/Debian):
-     # sudo apt install -y gcc-multilib g++-multilib libc6-dev-i386
+     # sudo dpkg --add-architecture i386 && sudo apt install -y gcc-multilib g++-multilib
      ```
 2. **Android Development Tools**:
    - Install [Android Studio for Linux](https://developer.android.com/studio).
@@ -383,18 +405,25 @@ npm run desktop:dev
 
 #### 2. Production Packaging:
 ```bash
-# Build the universal standalone AppImage for your host architecture:
+# Build both the universal standalone AppImage and Debian package for your host architecture:
 npm run desktop:package:linux
 
-# (Optional: pass --deb if you also need a Debian package, or specify an architecture):
-# npm run desktop:package:linux -- --deb
-# npm run desktop:package:linux -- --arch arm64
+# Specific architecture shortcuts:
+npm run desktop:package:linux:x64      # 64-bit AMD/Intel (.deb + .AppImage)
+npm run desktop:package:linux:arm64    # 64-bit ARM (.deb + .AppImage)
+npm run desktop:package:linux:x86      # 32-bit AMD/Intel (.deb + .AppImage)
+npm run desktop:package:linux:armhf    # 32-bit ARM (.deb + .AppImage)
+npm run desktop:package:linux:all      # All 4 architectures
+
+# Single-format options (optional):
+# npm run desktop:package:linux -- --deb       # .deb package only
+# npm run desktop:package:linux -- --appimage  # .AppImage only
 ```
 - **Universal Output Format**:
-  - **64-bit AMD/Intel**: `DocChisel_<version>_x86_64.AppImage` (and `DocChisel_<version>_amd64.deb` if `--deb` is passed)
-  - **32-bit AMD/Intel**: `DocChisel_<version>_i686.AppImage` (and `DocChisel_<version>_i386.deb` if `--deb` is passed)
-  - **64-bit ARM**: `DocChisel_<version>_arm64.AppImage` (and `DocChisel_<version>_arm64.deb` if `--deb` is passed)
-  - **32-bit ARM**: `DocChisel_<version>_armhf.AppImage` (and `DocChisel_<version>_armhf.deb` if `--deb` is passed)
+  - **64-bit AMD/Intel**: `DocChisel_<version>_x86_64.AppImage` and `DocChisel_<version>_amd64.deb`
+  - **32-bit AMD/Intel**: `DocChisel_<version>_i686.AppImage` and `DocChisel_<version>_i386.deb`
+  - **64-bit ARM**: `DocChisel_<version>_arm64.AppImage` and `DocChisel_<version>_arm64.deb`
+  - **32-bit ARM**: `DocChisel_<version>_armhf.AppImage` and `DocChisel_<version>_armhf.deb`
 - **Installing & Running on ANY Linux Distribution**:
   AppImages are self-contained and distribution-agnostic (Ubuntu, Debian, Fedora, Arch, openSUSE, Mint, etc.):
   ```bash
@@ -584,16 +613,32 @@ If `pkg-config` cannot locate `webkit2gtk-4.1`:
 sudo apt install -y libwebkit2gtk-4.1-dev libgtk-3-dev pkg-config
 
 # Fedora
-sudo dnf install -y webkit2gtk4.1-devel libappindicator-gtk3-devel pkg-config
+sudo dnf install -y webkit2gtk4.1-devel gtk3-devel pkg-config
 
 # Arch Linux
-sudo pacman -S --needed webkit2gtk-4.1 libappindicator-gtk3 pkgconf
+sudo pacman -S --needed webkit2gtk-4.1 gtk3 pkgconf
+
+# openSUSE
+sudo zypper install -y webkit2gtk4-devel gtk3-devel pkg-config
 ```
 
 ### 5. Linux Desktop: AppImage FUSE Error
-Ubuntu 22.04+ and Debian 12 no longer include FUSE v2 by default:
+Modern Linux distributions (Ubuntu 22.04+, Debian 12, Fedora, Arch, openSUSE) may not include FUSE v2 runtime by default:
 ```bash
+# Ubuntu / Debian
 sudo apt install -y libfuse2
+
+# Fedora
+sudo dnf install -y fuse-libs
+
+# Arch Linux
+sudo pacman -S fuse2
+
+# openSUSE
+sudo zypper install -y libfuse2
+
+# Or run the AppImage without FUSE via self-extraction:
+APPIMAGE_EXTRACT_AND_RUN=1 ./DocChisel_*.AppImage
 ```
 
 ---

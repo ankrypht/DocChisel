@@ -130,15 +130,19 @@ npm run check:all
 - **WebKit2GTK & Desktop Libraries**:
   - **Ubuntu / Debian**:
     ```bash
-    sudo apt update && sudo apt install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev pkg-config libfuse2
+    sudo apt update && sudo apt install -y libwebkit2gtk-4.1-dev libgtk-3-dev build-essential curl wget file libssl-dev librsvg2-dev pkg-config patchelf libfuse2
     ```
   - **Fedora**:
     ```bash
-    sudo dnf install -y webkit2gtk4.1-devel openssl-devel libappindicator-gtk3-devel librsvg2-devel libxdo-devel pkg-config && sudo dnf group install -y "c-development"
+    sudo dnf install -y webkit2gtk4.1-devel gtk3-devel openssl-devel curl wget file librsvg2-devel pkg-config patchelf fuse-libs && sudo dnf group install -y "c-development"
     ```
   - **Arch Linux**:
     ```bash
-    sudo pacman -S --needed webkit2gtk-4.1 base-devel curl wget file openssl appmenu-gtk-module libappindicator-gtk3 librsvg xdotool pkgconf
+    sudo pacman -S --needed webkit2gtk-4.1 gtk3 base-devel curl wget file openssl librsvg patchelf pkgconf fuse2
+    ```
+  - **openSUSE**:
+    ```bash
+    sudo zypper install -y webkit2gtk4-devel gtk3-devel libopenssl-devel curl wget file librsvg-devel pkg-config patchelf libfuse2 && sudo zypper install -t pattern devel_basis
     ```
 - **Rust Linux Targets (64-bit and 32-bit AMD & ARM)**:
   ```bash
