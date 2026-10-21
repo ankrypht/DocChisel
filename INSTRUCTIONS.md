@@ -264,8 +264,11 @@ npm run check:all
      # Install host target (auto-installed by rustup)
      # For cross-compiling or building across architectures on Linux:
      rustup target add x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu i686-unknown-linux-gnu armv7-unknown-linux-gnueabihf
-     # (Optional: for local 32-bit x86 builds on 64-bit Ubuntu/Debian):
-     # sudo dpkg --add-architecture i386 && sudo apt install -y gcc-multilib g++-multilib libwebkit2gtk-4.1-dev:i386 libgtk-3-dev:i386 librsvg2-dev:i386 librsvg2-common:i386 libssl-dev:i386
+     # (Optional: for local 32-bit multiarch cross-compilation on 64-bit Ubuntu/Debian):
+     # - For 32-bit AMD/Intel (i686):
+     #   sudo dpkg --add-architecture i386 && sudo apt install -y gcc-multilib g++-multilib libwebkit2gtk-4.1-dev:i386 libgtk-3-dev:i386 librsvg2-dev:i386 librsvg2-common:i386 libssl-dev:i386
+     # - For 32-bit ARM (armhf):
+     #   sudo dpkg --add-architecture armhf && sudo apt install -y gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf libwebkit2gtk-4.1-dev:armhf libgtk-3-dev:armhf librsvg2-dev:armhf librsvg2-common:armhf libssl-dev:armhf qemu-user-static binfmt-support
      ```
 2. **Android Development Tools**:
    - Install [Android Studio for Linux](https://developer.android.com/studio).
@@ -447,7 +450,7 @@ npm run desktop:package:linux:all      # All 4 architectures
 > - **64-bit AMD/Intel**: `DocChisel_<version>_x86_64.AppImage` & `DocChisel_<version>_amd64.deb` (native `ubuntu-22.04` runner)
 > - **64-bit ARM**: `DocChisel_<version>_arm64.AppImage` & `DocChisel_<version>_arm64.deb` (native `ubuntu-24.04-arm` runner)
 > - **32-bit AMD/Intel**: `DocChisel_<version>_i686.AppImage` & `DocChisel_<version>_i386.deb` (32-bit multiarch on `ubuntu-22.04`)
-> - **32-bit ARM**: `DocChisel_<version>_armhf.AppImage` & `DocChisel_<version>_armhf.deb` (cross-toolchain + QEMU on `ubuntu-22.04`)
+> - **32-bit ARM**: `DocChisel_<version>_armhf.AppImage` & `DocChisel_<version>_armhf.deb` (cross-toolchain + QEMU + native appimagetool packaging on `ubuntu-22.04`)
 > 
 > **How to Trigger & Download**:
 > 1. In GitHub, go to **Actions** → **Build Linux Packages (.deb & AppImage)** → **Run workflow**.

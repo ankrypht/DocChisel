@@ -147,8 +147,11 @@ npm run check:all
 - **Rust Linux Targets (64-bit and 32-bit AMD & ARM)**:
   ```bash
   rustup target add x86_64-unknown-linux-gnu i686-unknown-linux-gnu aarch64-unknown-linux-gnu armv7-unknown-linux-gnueabihf
-  # (Optional: for local 32-bit x86 builds on 64-bit Ubuntu/Debian):
-  # sudo dpkg --add-architecture i386 && sudo apt install -y gcc-multilib g++-multilib libwebkit2gtk-4.1-dev:i386 libgtk-3-dev:i386 librsvg2-dev:i386 librsvg2-common:i386 libssl-dev:i386
+  # (Optional: for local 32-bit multiarch cross-compilation on 64-bit Ubuntu/Debian):
+  # - For 32-bit AMD/Intel (i686):
+  #   sudo dpkg --add-architecture i386 && sudo apt install -y gcc-multilib g++-multilib libwebkit2gtk-4.1-dev:i386 libgtk-3-dev:i386 librsvg2-dev:i386 librsvg2-common:i386 libssl-dev:i386
+  # - For 32-bit ARM (armhf):
+  #   sudo dpkg --add-architecture armhf && sudo apt install -y gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf libwebkit2gtk-4.1-dev:armhf libgtk-3-dev:armhf librsvg2-dev:armhf librsvg2-common:armhf libssl-dev:armhf qemu-user-static binfmt-support
   ```
 - **For Android Development**: Install [Android Studio for Linux](https://developer.android.com/studio), configure `ANDROID_HOME`, and install `cargo-ndk`:
   ```bash
