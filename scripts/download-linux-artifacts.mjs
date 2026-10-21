@@ -218,10 +218,48 @@ function organizeDownloadedFiles(stagingDir) {
 
 async function main() {
   let downloaded = false;
-  const token = getGitHubToken();
+
+  // Method 0: Check if a local zip was provided as argument or exists in releases/
+  let localZip = null;
+  for (const arg of process.argv.slice(2)) {
+    if (arg.startsWith('-')) continue;
+    const resolvedPath = path.resolve(arg.replace(/^~/, process.env.HOME || ''));
+    if (fs.existsSync(resolvedPath) && (resolvedPath.endsWith('.zip') || fs.statSync(resolvedPath).isFile())) {
+      localZip = resolvedPath;
+      break;
+    }
+  }
+
+  if (!localZip) {
+    const candidates = [
+      path.join(releasesDir, `${artifactName}.zip`),
+      path.join(releasesDir, `docchisel-linux-all-v${version}.zip`),
+    ];
+    for (const cand of candidates) {
+      if (fs.existsSync(cand)) {
+        localZip = cand;
+        break;
+      }
+    }
+  }
+
+  if (localZip) {
+    console.log(`==> Found local archive: ${localZip}`);
+    console.log('==> Extracting and organizing release packages into releases/linux/...');
+    const stagingDir = path.join(releasesDir, `_staging_local_${Date.now()}`);
+    if (extractZip(localZip, stagingDir)) {
+      organizeDownloadedFiles(stagingDir);
+      try {
+        fs.rmSync(stagingDir, { recursive: true, force: true });
+      } catch {}
+      downloaded = true;
+    }
+  }
+
+  const token = !downloaded ? getGitHubToken() : null;
 
   // Method 1: GitHub REST API with real-time streaming progress
-  if (token) {
+  if (!downloaded && token) {
     try {
       console.log('==> Authenticated session detected. Querying GitHub Actions API for artifacts...');
       const listUrl = `https://api.github.com/repos/${repoSlug}/actions/artifacts?name=${encodeURIComponent(
