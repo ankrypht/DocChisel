@@ -10,7 +10,7 @@
 ## ⚡ Highlights
 
 - **🔒 100% Local & Offline**: Your files never leave your device. Zero cloud uploads, zero remote dependencies, zero tracking.
-- **🦀 High-Performance Rust Core Engine**: Multi-threaded with Rayon, SIMD image resampling with Lanczos3, and memory-mapped streaming.
+- **🦀 High-Performance Rust Core Engine**: Multi-threaded with Rayon, SIMD image resampling with Lanczos3, and memory-mapped streaming on modern Rust 2024 edition.
 - **🖥️ Cross-Platform Desktop App**: Built with Tauri v2 + React 19 + Tailwind CSS for macOS, Windows, and Linux.
 - **📱 Mobile App**: Built with Expo + React Native + NativeWind with a native UniFFI Rust bridge for Android (and architected for iOS; iOS is currently untested and not released pending App Store fees).
 - **🎨 Sleek Dark Aesthetic**: Modern dark interface inspired by Apple & Zinc design principles.

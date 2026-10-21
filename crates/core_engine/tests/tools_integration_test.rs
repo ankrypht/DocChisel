@@ -52,7 +52,7 @@ fn create_test_pdf(path: &Path, page_count: usize) {
     doc.objects.insert(pages_id, Object::Dictionary(pages_dict));
 
     for &page_id in &page_ids {
-        if let Some(Object::Dictionary(ref mut page_dict)) = doc.objects.get_mut(&page_id) {
+        if let Some(Object::Dictionary(page_dict)) = doc.objects.get_mut(&page_id) {
             page_dict.set("Parent", Object::Reference(pages_id));
         }
     }

@@ -31,12 +31,12 @@ pub fn get_unique_output_path(output_dir: &Path, filename: &str) -> PathBuf {
 }
 
 fn parse_stem_counter(stem: &str) -> (&str, usize) {
-    if let Some(open_paren) = stem.rfind(" (") {
-        if stem.ends_with(')') {
-            let num_str = &stem[open_paren + 2..stem.len() - 1];
-            if let Ok(num) = num_str.parse::<usize>() {
-                return (&stem[..open_paren], num + 1);
-            }
+    if let Some(open_paren) = stem.rfind(" (")
+        && stem.ends_with(')')
+    {
+        let num_str = &stem[open_paren + 2..stem.len() - 1];
+        if let Ok(num) = num_str.parse::<usize>() {
+            return (&stem[..open_paren], num + 1);
         }
     }
     (stem, 1)

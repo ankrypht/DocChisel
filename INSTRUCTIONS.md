@@ -61,7 +61,7 @@ The following steps are identical across **macOS**, **Windows**, and **Linux**:
 
 ### 1. Install Common System Tools
 - **Node.js**: Install Node.js LTS (`v24.x+`) from [nodejs.org](https://nodejs.org/).
-- **Rust**: Install Rust via [rustup.rs](https://rustup.rs/):
+- **Rust**: Install Rust via [rustup.rs](https://rustup.rs/) (Rust 1.85+ recommended for Rust 2024 edition support):
   ```bash
   # macOS / Linux
   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh

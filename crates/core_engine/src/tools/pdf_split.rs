@@ -89,7 +89,7 @@ fn create_sub_document(
 
     // Update parent reference in selected pages
     for &page_id in &selected_page_ids {
-        if let Some(Object::Dictionary(ref mut page_dict)) = target_doc.objects.get_mut(&page_id) {
+        if let Some(Object::Dictionary(page_dict)) = target_doc.objects.get_mut(&page_id) {
             page_dict.set("Parent", Object::Reference(pages_id));
         }
     }
@@ -105,7 +105,7 @@ fn create_sub_document(
                 .and_then(Object::as_reference)
                 .map_err(|e| EngineError::PdfError(format!("Missing Root in trailer: {}", e)))?;
 
-            if let Some(Object::Dictionary(ref mut cat_dict)) = target_doc.objects.get_mut(&catalog_obj_id) {
+            if let Some(Object::Dictionary(cat_dict)) = target_doc.objects.get_mut(&catalog_obj_id) {
                 cat_dict.set("Pages", Object::Reference(pages_id));
             }
         }

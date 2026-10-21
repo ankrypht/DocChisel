@@ -78,7 +78,7 @@ pub fn run(params: &PdfMergeParams) -> Result<JobOutput, EngineError> {
 
     // Update parent reference in all page objects to point to our unified /Pages
     for &page_id in &pages_object_ids {
-        if let Some(Object::Dictionary(ref mut page_dict)) = target_doc.objects.get_mut(&page_id) {
+        if let Some(Object::Dictionary(page_dict)) = target_doc.objects.get_mut(&page_id) {
             page_dict.set("Parent", Object::Reference(pages_id));
         }
     }

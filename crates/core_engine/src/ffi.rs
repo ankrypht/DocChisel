@@ -7,14 +7,15 @@ use crate::dispatcher::execute_job;
 ///
 /// # Safety
 /// Dereferences `payload_ptr` which must be a valid, null-terminated C string or null.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn docchisel_execute_job(payload_ptr: *const c_char) -> *mut c_char {
     if payload_ptr.is_null() {
         let err_json = r#"{"success":false,"error":{"code":"NULL_POINTER","message":"Payload pointer was null"}}"#;
         return CString::new(err_json).unwrap_or_default().into_raw();
     }
 
-    let c_str = CStr::from_ptr(payload_ptr);
+    // SAFETY: caller guarantees payload_ptr is a valid, null-terminated C string when non-null
+    let c_str = unsafe { CStr::from_ptr(payload_ptr) };
     let payload_str = match c_str.to_str() {
         Ok(s) => s,
         Err(_) => {
@@ -31,9 +32,10 @@ pub unsafe extern "C" fn docchisel_execute_job(payload_ptr: *const c_char) -> *m
 ///
 /// # Safety
 /// `ptr` must be a pointer allocated by `docchisel_execute_job` (via `CString::into_raw`) or null.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn docchisel_free_string(ptr: *mut c_char) {
     if !ptr.is_null() {
-        let _ = CString::from_raw(ptr);
+        // SAFETY: ptr was allocated by docchisel_execute_job via CString::into_raw
+        let _ = unsafe { CString::from_raw(ptr) };
     }
 }

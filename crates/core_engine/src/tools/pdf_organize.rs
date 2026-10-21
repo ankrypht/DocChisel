@@ -26,15 +26,15 @@ pub fn run(params: &PdfOrganizeParams) -> Result<JobOutput, EngineError> {
     // 1. Apply rotations
     if let Some(ref rotations) = params.rotations {
         for rot in rotations {
-            if let Some(&page_id) = pages_map.get(&(rot.page_number as u32)) {
-                if let Some(Object::Dictionary(ref mut page_dict)) = doc.objects.get_mut(&page_id) {
-                    let current_rot = page_dict
-                        .get(b"Rotate")
-                        .and_then(Object::as_i64)
-                        .unwrap_or(0);
-                    let new_rot = (current_rot + rot.degrees).rem_euclid(360);
-                    page_dict.set("Rotate", Object::Integer(new_rot));
-                }
+            if let Some(&page_id) = pages_map.get(&(rot.page_number as u32))
+                && let Some(Object::Dictionary(page_dict)) = doc.objects.get_mut(&page_id)
+            {
+                let current_rot = page_dict
+                    .get(b"Rotate")
+                    .and_then(Object::as_i64)
+                    .unwrap_or(0);
+                let new_rot = (current_rot + rot.degrees).rem_euclid(360);
+                page_dict.set("Rotate", Object::Integer(new_rot));
             }
         }
     }
@@ -90,7 +90,7 @@ pub fn run(params: &PdfOrganizeParams) -> Result<JobOutput, EngineError> {
 
     // Update parent reference in selected pages
     for &page_id in &selected_page_ids {
-        if let Some(Object::Dictionary(ref mut page_dict)) = doc.objects.get_mut(&page_id) {
+        if let Some(Object::Dictionary(page_dict)) = doc.objects.get_mut(&page_id) {
             page_dict.set("Parent", Object::Reference(pages_id));
         }
     }
@@ -102,7 +102,7 @@ pub fn run(params: &PdfOrganizeParams) -> Result<JobOutput, EngineError> {
         .and_then(Object::as_reference)
         .map_err(|e| EngineError::PdfError(format!("Missing Root in trailer: {}", e)))?;
 
-    if let Some(Object::Dictionary(ref mut cat_dict)) = doc.objects.get_mut(&catalog_obj_id) {
+    if let Some(Object::Dictionary(cat_dict)) = doc.objects.get_mut(&catalog_obj_id) {
         cat_dict.set("Pages", Object::Reference(pages_id));
     }
 

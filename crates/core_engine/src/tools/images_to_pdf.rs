@@ -164,7 +164,7 @@ pub fn run(params: &ImagesToPdfParams) -> Result<JobOutput, EngineError> {
 
     // Update Parent in each page
     for &page_id in &page_object_ids {
-        if let Some(Object::Dictionary(ref mut page_dict)) = doc.objects.get_mut(&page_id) {
+        if let Some(Object::Dictionary(page_dict)) = doc.objects.get_mut(&page_id) {
             page_dict.set("Parent", Object::Reference(pages_id));
         }
     }
