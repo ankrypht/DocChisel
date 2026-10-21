@@ -54,41 +54,28 @@ function getGitHubToken() {
 
 function extractZip(zipPath, targetDir) {
   fs.mkdirSync(targetDir, { recursive: true });
-  let lastError = null;
   if (commandExists('unzip')) {
     try {
-      execSync(`unzip -qo "${zipPath}" -d "${targetDir}"`, {
-        stdio: ['ignore', 'pipe', 'pipe'],
-        env: getExpandedEnv(),
-      });
-      return { success: true };
-    } catch (err) {
-      lastError = err.stderr ? err.stderr.toString() : err.message;
-    }
+      execSync(`unzip -qo "${zipPath}" -d "${targetDir}"`, { stdio: 'ignore', env: getExpandedEnv() });
+      return true;
+    } catch {}
   }
   if (process.platform === 'win32') {
     try {
       execSync(
         `powershell -NoProfile -Command "Expand-Archive -Force -Path '${zipPath}' -DestinationPath '${targetDir}'"`,
-        { stdio: ['ignore', 'pipe', 'pipe'] }
+        { stdio: 'ignore' }
       );
-      return { success: true };
-    } catch (err) {
-      lastError = err.stderr ? err.stderr.toString() : err.message;
-    }
+      return true;
+    } catch {}
   }
   if (commandExists('tar')) {
     try {
-      execSync(`tar -xf "${zipPath}" -C "${targetDir}"`, {
-        stdio: ['ignore', 'pipe', 'pipe'],
-        env: getExpandedEnv(),
-      });
-      return { success: true };
-    } catch (err) {
-      lastError = err.stderr ? err.stderr.toString() : err.message;
-    }
+      execSync(`tar -xf "${zipPath}" -C "${targetDir}"`, { stdio: 'ignore', env: getExpandedEnv() });
+      return true;
+    } catch {}
   }
-  return { success: false, error: lastError || 'No zip extraction tool succeeded.' };
+  return false;
 }
 
 function getRepoSlug() {
@@ -231,59 +218,10 @@ function organizeDownloadedFiles(stagingDir) {
 
 async function main() {
   let downloaded = false;
-
-  // Method 0: Check if a local zip was provided as argument or exists in releases/
-  let localZip = null;
-  for (const arg of process.argv.slice(2)) {
-    if (arg.startsWith('-')) continue;
-    const resolvedPath = path.resolve(arg.replace(/^~/, process.env.HOME || ''));
-    if (fs.existsSync(resolvedPath) && (resolvedPath.endsWith('.zip') || fs.statSync(resolvedPath).isFile())) {
-      localZip = resolvedPath;
-      break;
-    }
-  }
-
-  if (!localZip) {
-    const candidates = [
-      path.join(releasesDir, `${artifactName}.zip`),
-      path.join(releasesDir, `docchisel-linux-all-v${version}.zip`),
-    ];
-    for (const cand of candidates) {
-      if (fs.existsSync(cand)) {
-        localZip = cand;
-        break;
-      }
-    }
-  }
-
-  if (localZip) {
-    console.log(`==> Found local archive: ${localZip}`);
-    console.log('==> Extracting and organizing release packages into releases/linux/...');
-    const stagingDir = path.join(releasesDir, `_staging_local_${Date.now()}`);
-    const res = extractZip(localZip, stagingDir);
-    if (res.success) {
-      organizeDownloadedFiles(stagingDir);
-      try {
-        fs.rmSync(stagingDir, { recursive: true, force: true });
-      } catch {}
-      downloaded = true;
-    } else {
-      console.error(`\n❌ Could not extract local archive: ${localZip}`);
-      if (res.error) console.error(`   ${res.error.trim()}`);
-      if (process.platform === 'darwin' && localZip.includes('/Downloads/')) {
-        console.error('\n💡 macOS blocks Terminal processes from reading ~/Downloads without special privacy permissions.');
-        console.error('   Please drag or copy the zip file into the project releases/ directory:');
-        console.error('   cp ~/Downloads/docchisel-linux-all-v*.zip releases/');
-        console.error('   npm run linux:download\n');
-      }
-      process.exit(1);
-    }
-  }
-
-  const token = !downloaded ? getGitHubToken() : null;
+  const token = getGitHubToken();
 
   // Method 1: GitHub REST API with real-time streaming progress
-  if (!downloaded && token) {
+  if (token) {
     try {
       console.log('==> Authenticated session detected. Querying GitHub Actions API for artifacts...');
       const listUrl = `https://api.github.com/repos/${repoSlug}/actions/artifacts?name=${encodeURIComponent(
@@ -311,8 +249,7 @@ async function main() {
           await downloadWithProgress(archiveUrl, headers, zipPath, latestArtifact.size_in_bytes);
 
           console.log('==> Extracting release packages...');
-          const extRes = extractZip(zipPath, stagingDir);
-          if (extRes.success) {
+          if (extractZip(zipPath, stagingDir)) {
             organizeDownloadedFiles(stagingDir);
             try {
               fs.rmSync(stagingDir, { recursive: true, force: true });
