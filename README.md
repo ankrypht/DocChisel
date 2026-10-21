@@ -173,59 +173,77 @@ npm run check:all
 ```bash
 # Launch Tauri desktop application with hot-reload
 npm run desktop:dev
-
-# Or run frontend-only preview in browser (http://localhost:1420)
-npm run desktop:dev:web
 ```
 
 ### Android App (macOS, Windows, or Linux)
-```bash
-# Step 1: Build the native Rust engine for local Android dev (fast arm64-v8a compilation)
-npm run mobile:build-engine:android
 
-# Step 2: Start Expo Metro server
+DocChisel uses `expo-dev-client` for development builds (inspired by [Moluxis](https://github.com/ankrypht/Moluxis)), installing alongside the production app as `DocChisel (Dev)` (`com.ankushsarkar.docchisel.dev`):
+
+```bash
+# Step 1: Build the native Rust engine for Android dev (fast arm64-v8a compilation)
+npm run mobile:engine -- --android
+
+# Step 2: Start Expo Metro bundler server
 npm run mobile:start
 
 # Step 3: Run directly on Android emulator or connected device
 npm run mobile:android
+
+# (Optional) Build standalone development APK directly for your physical device:
+npm run mobile:package -- --android --dev
 ```
 
-### iOS App (macOS Exclusive — Optional & Untested)
+#### 📲 Running on a Physical Android Phone / Tablet:
+1. Build the development APK: `npm run mobile:package -- --android --dev` (saved to `releases/android/DocChisel-<version>-dev.apk`).
+2. Transfer to phone via USB (or install via `adb install -r releases/android/DocChisel-<version>-dev.apk`).
+3. Start Metro on computer: `npm run mobile:start`.
+4. Open **DocChisel (Dev)** on your phone and scan the QR code to connect and start developing!
+
+### iOS App (macOS Exclusive)
 ```bash
-# Compile native engine for iOS and run in iOS Simulator
-npm run mobile:build-engine:ios
+# Local development on iOS Simulator:
+npm run mobile:engine -- --ios
 npm run mobile:ios
+
+# Production packaging (.ipa via EAS CLI or Xcode):
+npm run mobile:package -- --ios
 ```
 
 ---
 
 ## 📦 Packaging Apps for Production
 
-Run the command corresponding to your target platform. All scripts automatically check host compatibility safeguards:
+Run the command corresponding to your target platform. All scripts validate host platform safeguards:
 
 ```bash
-# Android: Compiles multi-architecture engine, generates 3 release APKs & 1 Google Play .aab
-# (Supported on: macOS, Windows, Linux)
-npm run mobile:build:apk-release
-npm run mobile:build:bundle
+# Desktop: Compiles for specific target platform
+npm run desktop:package -- --mac        # macOS Universal DMG (macOS host exclusive)
+npm run desktop:package -- --windows    # Windows NSIS Setup .exe (MSVC on Win, cargo-xwin on Mac/Linux)
+npm run desktop:package -- --linux      # Linux AppImage + DEB (defaults to host arch)
 
-# Windows: Compiles lean NSIS Setup .exe installer
-# (Supported on: Windows native, or cross-compiled on macOS / Linux via cargo-xwin + makensis)
-npm run desktop:package:windows
-
-# macOS: Compiles Universal DMG (Apple Silicon + Intel)
-# (Supported on: macOS ONLY - Exclusive)
-npm run desktop:package:mac-universal
-
-# Linux: Compiles .deb and universal standalone AppImage (runs on ANY Linux distribution)
-# (Supported on: Linux native, or automated via GitHub Actions for macOS/Windows developers)
-npm run desktop:package:linux
+# Linux single-format or specific architecture options:
+# npm run desktop:package -- --linux --deb            # .deb package only
+# npm run desktop:package -- --linux --appimage       # .AppImage only
+# npm run desktop:package -- --linux --arch x64        # 64-bit AMD/Intel target (x86_64)
+# npm run desktop:package -- --linux --arch arm64      # 64-bit ARM target (aarch64)
+# npm run desktop:package -- --linux --arch x86        # 32-bit AMD/Intel target (i686)
+# npm run desktop:package -- --linux --arch armhf      # 32-bit ARM target (armv7)
+# npm run desktop:package -- --linux --all-arch       # All 4 Linux architectures
 
 # Download Linux packages built by GitHub Actions directly to releases/linux/:
 npm run linux:download
 
-# All Supported Desktop Targets for your current host:
-npm run desktop:package:all
+# Android: Compiles multi-architecture engine and generates 3 release APKs (arm64, armv7, universal)
+npm run mobile:package -- --android
+
+# Android (Development APK for physical device):
+npm run mobile:package -- --android --dev
+
+# Android (Google Play Store): Compiles production .aab bundle
+npm run mobile:package -- --android --bundle
+
+# iOS: Package production release (.ipa) or configure Xcode archive
+npm run mobile:package -- --ios
 ```
 
 > [!NOTE]
@@ -237,7 +255,7 @@ npm run desktop:package:all
 
 ### 🎯 Collect All Final Binaries
 ```bash
-# Automatically gathers all built binaries (.apk, .aab, .dmg, .exe, .deb, .AppImage)
+# Automatically gathers all built binaries (.apk, .aab, .dmg, .exe, .deb, .AppImage, .ipa)
 # into the clean unified releases/ folder at the repository root
 npm run package:artifacts
 ```
@@ -261,16 +279,9 @@ npm run generate:icons
 # Cargo incremental caches) without deleting built APKs, DMGs, or release binaries
 npm run prune
 
-# Standard clean: terminates Gradle daemons, cleans Cargo target, Android, iOS & Expo caches
+# Full clean: terminates Gradle daemons, cleans Cargo target, Android, iOS & Expo caches
+# Strictly preserves the releases/ directory so finalized binaries are never deleted
 npm run clean
-
-# Deep clean: performs standard clean plus wipes releases/ folder
-npm run clean:deep
-
-# Targeted cleans
-npm run desktop:clean
-npm run mobile:clean:android
-npm run mobile:clean:all
 ```
 
 ---

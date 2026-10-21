@@ -30,6 +30,7 @@ This guide provides a comprehensive, step-by-step manual for setting up, develop
 ## 🏛️ Core Philosophy & Architecture
 
 DocChisel is built on 3 invariant architectural rules:
+
 1. **Single-Dispatcher Bridge**: Core Rust functionality is exposed via a single entry point (`execute_job`) accepting JSON payloads adhering to Zod schemas in `packages/shared`.
 2. **Zero File Bytes Over IPC/FFI**: Never pass binary buffers, Base64 strings, or Uint8Array blobs across IPC or FFI. The frontend passes filesystem paths; Rust reads from and writes directly to disk.
 3. **Permissive Open-Source Only**: Strictly 100% Apache-2.0 and MIT compliant (no AGPL/GPL crates like MuPDF or Ghostscript) ensuring seamless distribution on desktop and app stores.
@@ -40,15 +41,16 @@ DocChisel is built on 3 invariant architectural rules:
 
 DocChisel is engineered to run and build natively on developer workstations without requiring virtual machines, Docker containers, or cloud CI pipelines:
 
-| Target Platform | Final Package Format | macOS Host | Windows Host | Linux Host | Architecture & Exclusivity Details |
-| :--- | :--- | :---: | :---: | :---: | :--- |
-| **Android** | 3 APKs + 1 AAB | ✅ **Yes** | ✅ **Yes** | ✅ **Yes** | **Native on all 3 hosts** using Android SDK, NDK, and `cargo-ndk`. |
-| **Windows** | NSIS Setup `.exe` | ✅ **Yes** | ✅ **Yes** | ✅ **Yes** | **Native on Windows** (MSVC + NSIS); **Cross-compiled on macOS & Linux** via `cargo-xwin` + `makensis` + LLVM/LLD. |
-| **macOS** | Universal `.dmg` | ✅ **Yes** | ❌ **No** | ❌ **No** | **macOS Exclusive**. Requires Apple Cocoa frameworks, codesigning, and `hdiutil` DMG creation. |
-| **Linux** | `.deb` + `.AppImage` | ☁️ **GitHub Actions** | ☁️ **GitHub Actions** | ✅ **Yes** | **Linux Exclusive locally** (WebKit2GTK/GTK3). Automated across all 4 architectures via GitHub Actions (`build-linux.yml`). |
-| **iOS** | `.ipa` / Simulator | ✅ **Yes** | ❌ **No** | ❌ **No** | **macOS Exclusive**. Requires Xcode and iOS SDKs (untested/unreleased). |
+| Target Platform | Final Package Format |      macOS Host       |     Windows Host      | Linux Host | Architecture & Exclusivity Details                                                                                          |
+| :-------------- | :------------------- | :-------------------: | :-------------------: | :--------: | :-------------------------------------------------------------------------------------------------------------------------- |
+| **Android**     | 3 APKs + 1 AAB       |      ✅ **Yes**       |      ✅ **Yes**       | ✅ **Yes** | **Native on all 3 hosts** using Android SDK, NDK, and `cargo-ndk`.                                                          |
+| **Windows**     | NSIS Setup `.exe`    |      ✅ **Yes**       |      ✅ **Yes**       | ✅ **Yes** | **Native on Windows** (MSVC + NSIS); **Cross-compiled on macOS & Linux** via `cargo-xwin` + `makensis` + LLVM/LLD.          |
+| **macOS**       | Universal `.dmg`     |      ✅ **Yes**       |       ❌ **No**       | ❌ **No**  | **macOS Exclusive**. Requires Apple Cocoa frameworks, codesigning, and `hdiutil` DMG creation.                              |
+| **Linux**       | `.deb` + `.AppImage` | ☁️ **GitHub Actions** | ☁️ **GitHub Actions** | ✅ **Yes** | **Linux Exclusive locally** (WebKit2GTK/GTK3). Automated across all 4 architectures via GitHub Actions (`build-linux.yml`). |
+| **iOS**         | `.ipa` / Simulator   |      ✅ **Yes**       |       ❌ **No**       | ❌ **No**  | **macOS Exclusive**. Requires Xcode and iOS SDKs (untested/unreleased).                                                     |
 
 ### Why Are Some Targets Exclusive?
+
 - **macOS Exclusivity**: Apple Cocoa frameworks, codesigning notarization, and `hdiutil` disk image creation utilities exist solely in the Darwin/macOS operating system.
 - **Linux Exclusivity**: Tauri on Linux relies on WebKit2GTK 4.1 and GTK3, which are dynamic Linux system C libraries linking with `glibc`, X11, and Wayland.
 - **Windows Cross-Compilation**: Unlike Linux and macOS desktop apps, Windows binaries can be cross-compiled cleanly from macOS and Linux because `cargo-xwin` automatically retrieves and manages the MSVC CRT headers/libraries, and `makensis` runs cross-platform.
@@ -60,8 +62,10 @@ DocChisel is engineered to run and build natively on developer workstations with
 The following steps are identical across **macOS**, **Windows**, and **Linux**:
 
 ### 1. Install Common System Tools
+
 - **Node.js**: Install Node.js LTS (`v24.x+`) from [nodejs.org](https://nodejs.org/).
 - **Rust**: Install Rust via [rustup.rs](https://rustup.rs/) (Rust 1.85+ recommended for Rust 2024 edition support):
+
   ```bash
   # macOS / Linux
   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
@@ -71,7 +75,9 @@ The following steps are identical across **macOS**, **Windows**, and **Linux**:
   ```
 
 ### 2. Verify System Installations
+
 Open a fresh terminal (Terminal on macOS/Linux, PowerShell or Command Prompt on Windows):
+
 ```bash
 node -v
 npm -v
@@ -80,6 +86,7 @@ cargo --version
 ```
 
 ### 3. Clone Repository & Install Workspaces
+
 ```bash
 # 1. Clone repository
 git clone https://github.com/ankrypht/DocChisel.git
@@ -99,6 +106,7 @@ npm run check:all
 ### 1. macOS Development Host (Apple Silicon & Intel)
 
 #### What to Install on macOS:
+
 1. **Xcode Command Line Tools**:
    ```bash
    xcode-select --install
@@ -148,6 +156,7 @@ npm run check:all
 ### 2. Windows Development Host (Windows 10/11 x64)
 
 #### What to Install on Windows:
+
 1. **Visual Studio 2022 C++ Build Tools**:
    - Download [Visual Studio Build Tools 2022](https://visualstudio.microsoft.com/visual-cpp-build-tools/).
    - In the installer, select the workload: **"Desktop development with C++"**.
@@ -193,6 +202,7 @@ npm run check:all
 ### 3. Linux Development Host (Ubuntu/Debian, Fedora, Arch, openSUSE)
 
 #### What to Install on Linux:
+
 1. **System & WebKitGTK Development Libraries**:
    - **Ubuntu / Debian (22.04 LTS, 24.04 LTS+)**:
      ```bash
@@ -307,32 +317,67 @@ npm run check:all
 
 **Supported Development Hosts**: macOS, Windows, and Linux.
 
-#### 1. Fast Local Development:
+#### 1. Fast Local Development (Development Client):
+
+DocChisel uses `expo-dev-client` for development builds (inspired by [Moluxis](https://github.com/ankrypht/Moluxis)). Development builds use the distinct application ID `com.ankushsarkar.docchisel.dev` and app name `DocChisel (Dev)`, allowing side-by-side installation with the production release:
+
 ```bash
-# Step 1: Build the native Rust engine for local Android dev (arm64-v8a fast compilation)
-npm run mobile:build-engine:android
+# Step 1: Build the native Rust engine for Android dev (fast arm64-v8a compilation)
+npm run mobile:engine -- --android
 
 # Step 2: Start Expo Metro server
 npm run mobile:start
 
-# Step 3: Run on Android emulator or connected device (with USB debugging enabled)
+# Step 3: Run directly on Android emulator or connected device
 npm run mobile:android
 ```
+
 - **Hot Reload**: JavaScript and React Native UI updates instantly on the device via Expo Fast Refresh.
 - **Reloading**: Press `r` in the terminal to reload; press `m` to open the developer menu.
 
-#### 2. Production Release Packaging:
+#### 2. Building & Transferring the Dev APK to a Physical Device:
+
+To run the development build on your physical Android phone or tablet without tethering to a local machine build session:
+
+```bash
+# Compile development APK (com.ankushsarkar.docchisel.dev)
+npm run mobile:package -- --android --dev
+
+# (Optional) Collect all built binaries into releases/:
+npm run package:artifacts
+```
+
+The resulting development APK is saved to:
+`releases/android/DocChisel-<version>-dev.apk` (and `apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk`).
+
+**Installing on Physical Phone:**
+
+- **Method 1: Direct ADB Install (USB / Wi-Fi Debugging)**:
+  ```bash
+  adb install -r releases/android/DocChisel-<version>-dev.apk
+  ```
+- **Method 2: Direct File Transfer (USB / Wireless Share)**:
+  Connect your phone to your computer via USB (in File Transfer / MTP mode), copy `DocChisel-<version>-dev.apk` to your phone's `Download/` directory, and tap it in your phone's file manager to install (enable "Install unknown apps" if prompted).
+- **Method 3: Live Hot Reload with Expo Dev Client on Real Device**:
+  1. Start the Metro bundler on your computer: `npm run mobile:start`.
+  2. Ensure your phone and computer are on the same Wi-Fi network.
+  3. Open **DocChisel (Dev)** on your phone and scan the terminal QR code (or enter `http://<your-computer-ip>:8081`).
+
+#### 3. Production Release Packaging:
+
 ```bash
 # Step 1: Compile the multi-architecture 16 KB page-size aligned native engine
-npm run mobile:build-engine:android:release
+npm run mobile:engine -- --android --release
 
 # Step 2: Build the 3 release APKs (arm64-v8a, armeabi-v7a, universal)
-npm run mobile:build:apk-release
+npm run mobile:package -- --android
 
 # Step 3: Build the Google Play Store App Bundle (.aab)
-npm run mobile:build:bundle
+npm run mobile:package -- --android --bundle
 ```
+
 - **Output Files**:
+  - `DocChisel-<version>-dev.apk` (standalone development APK)
   - `DocChisel-<version>-arm64-v8a-release.apk` (modern 64-bit phones)
   - `DocChisel-<version>-armeabi-v7a-release.apk` (legacy 32-bit phones)
   - `DocChisel-<version>-universal-release.apk` (all devices)
@@ -352,20 +397,21 @@ npm run mobile:build:bundle
 **Supported Development Host**: macOS ONLY.
 
 #### 1. Local Development (with Hot Reload):
+
 ```bash
 npm run desktop:dev
 ```
+
 - Edits to React frontend in `apps/desktop/src/` update immediately via Vite HMR.
 - Edits to Rust backend in `apps/desktop/src-tauri/` or `crates/core_engine/` trigger an automatic incremental Cargo recompile.
 
 #### 2. Production Packaging:
-```bash
-# Primary Release: Universal DMG (Apple Silicon M1-M4 + Intel x86_64)
-npm run desktop:package:mac-universal
 
-# Or fast host-architecture DMG for quick local testing:
-npm run desktop:package:mac
+```bash
+# Universal DMG (Apple Silicon M series + Intel x86_64) on macOS
+npm run desktop:package -- --mac
 ```
+
 - **Output File**: `target/universal-apple-darwin/release/bundle/dmg/DocChisel_<version>_universal.dmg`
 - **Safeguard**: Running this script on Windows or Linux will halt with an explicit notification explaining macOS exclusivity.
 
@@ -374,22 +420,23 @@ npm run desktop:package:mac
 ### Target 3: Windows (NSIS Setup .exe)
 
 **Supported Development Hosts**:
+
 - **Windows**: Native build with MSVC & NSIS.
 - **macOS & Linux**: Cross-compiled via `cargo-xwin` + `makensis` + LLVM.
 
 #### 1. Local Development on Windows (with Hot Reload):
+
 ```bash
 npm run desktop:dev
 ```
 
 #### 2. Production Packaging (Works on Windows, macOS, and Linux):
-```bash
-# Release Build
-npm run desktop:package:windows
 
-# Debug Build
-npm run desktop:package:windows:debug
+```bash
+# Compiles lean NSIS Setup .exe installer (natively on Windows, or cross-compiled on macOS/Linux)
+npm run desktop:package -- --windows
 ```
+
 - **Output File**: `target/release/bundle/nsis/DocChisel_<version>_x64-setup.exe` (or in `target/x86_64-pc-windows-msvc/release/bundle/nsis/` when cross-compiled).
 - **How Cross-Compilation Operates**:
   1. `scripts/build-desktop.mjs` automatically validates `makensis` and `cargo-xwin`.
@@ -405,26 +452,27 @@ npm run desktop:package:windows:debug
 **Supported Development Host**: Linux ONLY.
 
 #### 1. Local Development on Linux (with Hot Reload):
+
 ```bash
 npm run desktop:dev
 ```
 
 #### 2. Production Packaging:
+
 ```bash
-# Build both the universal standalone AppImage and Debian package for your host architecture:
-npm run desktop:package:linux
+# Build both universal standalone AppImage and Debian package for your host architecture:
+npm run desktop:package -- --linux
 
-# Specific architecture shortcuts:
-npm run desktop:package:linux:x64      # 64-bit AMD/Intel (.deb + .AppImage)
-npm run desktop:package:linux:arm64    # 64-bit ARM (.deb + .AppImage)
-npm run desktop:package:linux:x86      # 32-bit AMD/Intel (.deb + .AppImage)
-npm run desktop:package:linux:armhf    # 32-bit ARM (.deb + .AppImage)
-npm run desktop:package:linux:all      # All 4 architectures
-
-# Single-format options (optional):
-# npm run desktop:package:linux -- --deb       # .deb package only
-# npm run desktop:package:linux -- --appimage  # .AppImage only
+# Single-format or specific architecture options:
+# npm run desktop:package -- --linux --deb            # .deb package only
+# npm run desktop:package -- --linux --appimage       # .AppImage only
+# npm run desktop:package -- --linux --arch x64        # 64-bit AMD/Intel target (x86_64)
+# npm run desktop:package -- --linux --arch arm64      # 64-bit ARM target (aarch64)
+# npm run desktop:package -- --linux --arch x86        # 32-bit AMD/Intel target (i686)
+# npm run desktop:package -- --linux --arch armhf      # 32-bit ARM target (armv7)
+# npm run desktop:package -- --linux --all-arch       # All 4 Linux architectures
 ```
+
 - **Universal Output Format**:
   - **64-bit AMD/Intel**: `DocChisel_<version>_x86_64.AppImage` and `DocChisel_<version>_amd64.deb`
   - **32-bit AMD/Intel**: `DocChisel_<version>_i686.AppImage` and `DocChisel_<version>_i386.deb`
@@ -432,6 +480,7 @@ npm run desktop:package:linux:all      # All 4 architectures
   - **32-bit ARM**: `DocChisel_<version>_armhf.AppImage` and `DocChisel_<version>_armhf.deb`
 - **Installing & Running on ANY Linux Distribution**:
   AppImages are self-contained and distribution-agnostic (Ubuntu, Debian, Fedora, Arch, openSUSE, Mint, etc.):
+
   ```bash
   # AppImage (runs everywhere):
   chmod +x DocChisel_*_*.AppImage
@@ -444,15 +493,17 @@ npm run desktop:package:linux:all      # All 4 architectures
 > [!IMPORTANT]
 > **Building Linux Packages from macOS / Windows without Local VMs or Docker**:
 > Because Linux GUI packages link dynamically against WebKit2GTK 4.1 and GTK3 C libraries, local macOS and Windows machines cannot compile native Linux packages directly.
-> 
+>
 > **Solution: Automated GitHub Actions Workflow**
 > A ready-to-run GitHub Actions workflow (`.github/workflows/build-linux.yml`) compiles both `.deb` and `.AppImage` packages across all 4 architectures in the cloud and bundles them for download:
+>
 > - **64-bit AMD/Intel**: `DocChisel_<version>_x86_64.AppImage` & `DocChisel_<version>_amd64.deb` (native `ubuntu-22.04` runner)
 > - **64-bit ARM**: `DocChisel_<version>_arm64.AppImage` & `DocChisel_<version>_arm64.deb` (native `ubuntu-24.04-arm` runner)
 > - **32-bit AMD/Intel**: `DocChisel_<version>_i686.AppImage` & `DocChisel_<version>_i386.deb` (32-bit multiarch on `ubuntu-22.04`)
 > - **32-bit ARM**: `DocChisel_<version>_armhf.AppImage` & `DocChisel_<version>_armhf.deb` (cross-toolchain + QEMU + native appimagetool packaging on `ubuntu-22.04`)
-> 
+>
 > **How to Trigger & Download**:
+>
 > 1. In GitHub, go to **Actions** → **Build Linux Packages (.deb & AppImage)** → **Run workflow**.
 > 2. Once completed, download `docchisel-linux-all-v<version>.zip` directly from the workflow run page (under **Artifacts**).
 > 3. Alternatively, run `npm run linux:download` locally to automatically fetch and place the files into `releases/linux/`.
@@ -461,40 +512,109 @@ npm run desktop:package:linux:all      # All 4 architectures
 
 ---
 
-### Target 5: iOS (.ipa & Simulator) — macOS Exclusive (Untested)
+### Target 5: iOS (.ipa & Simulator) — macOS Exclusive
 
-**Supported Development Host**: macOS with Xcode.
+**Supported Development Host**: macOS with Xcode 15+ and Command Line Tools (`xcode-select --install`).
 
-> [!NOTE]
-> **Status: Untested & Unreleased**: The complete mobile architecture, Swift UniFFI bridge, and Expo configuration remain fully intact in the repository. The iOS pipeline is preserved for future activation pending Apple Developer App Store account enrollment.
+#### 1. Local Development (Simulator & Physical Device):
 
 ```bash
-# Compile native engine for iOS Simulator
-npm run mobile:build-engine:ios
+# Step 1: Compile the native Rust core engine and UniFFI Swift bridge for iOS
+npm run mobile:engine -- --ios
 
-# Run on iOS Simulator
+# Step 2: Launch the development client on the iOS Simulator
 npm run mobile:ios
-
-# Compile release configuration:
-npm run mobile:build-engine:ios:release
-npm run mobile:ios:release
 ```
+
+- Edits to React Native UI in `apps/mobile/app/` update immediately via Expo Fast Refresh.
+- Native Swift bindings live in `apps/mobile/modules/docchisel-bridge/ios/`.
+
+#### 2. Production Packaging (.ipa & App Store Archive):
+
+You can build the production iOS package either using EAS CLI (recommended zero-config) or native Xcode tools:
+
+##### Method 1: Local EAS Build (Recommended — Fast & Automated)
+
+EAS CLI compiles the production `.ipa` directly on your Mac using your local Xcode toolchain without cloud queues:
+
+```bash
+# Compile native release engine
+npm run mobile:engine -- --ios --release
+
+# Build standalone production .ipa locally
+npx eas-cli build --platform ios --profile production --local
+```
+
+##### Method 2: Native Xcode GUI Packaging (App Store Connect / Ad Hoc)
+
+1. **Prebuild the native iOS Xcode project**:
+   ```bash
+   npx --workspace=@docchisel/mobile expo prebuild --platform ios --clean
+   ```
+2. **Open the project in Xcode**:
+   ```bash
+   open apps/mobile/ios/DocChisel.xcworkspace
+   ```
+3. **Configure Code Signing**:
+   - In Xcode, select the **DocChisel** project in the left navigator.
+   - Under **Signing & Capabilities**, select your Apple Developer Team and provisioning profile.
+4. **Archive & Export**:
+   - In the target destination bar, select **Any iOS Device (arm64)**.
+   - From the top menu, select **Product** → **Archive**.
+   - When the Xcode Organizer opens, select your archive and click **Distribute App**.
+   - Choose **App Store Connect** (for TestFlight / App Store) or **Ad Hoc** / **Development** to export the `.ipa` file.
+
+##### Method 3: Command-Line `xcodebuild` Archive & Export
+
+```bash
+# Step 1: Prebuild native Xcode workspace
+npx --workspace=@docchisel/mobile expo prebuild --platform ios --clean
+
+# Step 2: Build release archive
+xcodebuild -workspace apps/mobile/ios/DocChisel.xcworkspace \
+  -scheme DocChisel \
+  -configuration Release \
+  -sdk iphoneos \
+  -archivePath apps/mobile/ios/build/DocChisel.xcarchive \
+  archive
+
+# Step 3: Export .ipa using ExportOptions.plist
+xcodebuild -exportArchive \
+  -archivePath apps/mobile/ios/build/DocChisel.xcarchive \
+  -exportOptionsPlist ExportOptions.plist \
+  -exportPath releases/ios/
+```
+
+##### Method 4: Cloud EAS Build (Expo Application Services)
+
+If you prefer building in Expo's managed cloud infrastructure:
+
+```bash
+npx eas-cli build --platform ios --profile production
+```
+
+- **Output File**: `releases/ios/DocChisel_<version>.ipa` (collected via `npm run package:artifacts`).
+- **Safeguard**: Running iOS packaging on Windows or Linux halts immediately with an explicit error explaining that iOS packaging requires Apple Cocoa frameworks and Xcode on macOS.
 
 ---
 
 ## 🎨 Brand Assets & Icon Generation Pipeline
 
 DocChisel uses an **SVG-first architecture**. All platform graphics originate from mathematical curves in `assets/brand/*.svg`:
+
 - `desktop-app-icon.svg`: Master desktop square icon.
 - `adaptive-foreground.svg`: Android adaptive launcher foreground.
 - `adaptive-monochrome.svg`: Android 13+ Material You themed silhouette.
 - `splash-icon.svg`: Application launch logo.
 
 ### Generating All Platform Assets:
+
 ```bash
 npm run generate:icons
 ```
+
 DocChisel's `scripts/generate-icons.mjs` is written in 100% pure Node.js and automatically:
+
 1. Rasterizes vector SVGs to crisp high-DPI bitmaps using Skia (`@napi-rs/canvas`).
 2. Generates desktop `icon.icns` (Retina macOS) and `icon.ico` (Win32 multi-resolution container).
 3. Generates Windows Store modern tiles (`Square44x44`, `Square150x150`, `Square310x310`, `StoreLogo`).
@@ -512,11 +632,13 @@ npm run package:artifacts
 ```
 
 ### What this does:
+
 1. Scans build trees across all target platforms.
 2. Copies and renames finalized binaries into a clean structure at `<repo_root>/releases`:
    ```
    releases/
    ├── android/
+   │   ├── DocChisel-<version>-dev.apk               # Development client APK (physical device install)
    │   ├── DocChisel-<version>-arm64-v8a-release.apk
    │   ├── DocChisel-<version>-armeabi-v7a-release.apk
    │   ├── DocChisel-<version>-universal-release.apk
@@ -525,15 +647,17 @@ npm run package:artifacts
    │   └── DocChisel_<version>_universal.dmg
    ├── windows/
    │   └── DocChisel_<version>_x64-setup.exe
-   └── linux/
-       ├── DocChisel_<version>_x86_64.AppImage
-       ├── DocChisel_<version>_amd64.deb
-       ├── DocChisel_<version>_i386.deb
-       ├── DocChisel_<version>_i686.AppImage
-       ├── DocChisel_<version>_arm64.deb
-       ├── DocChisel_<version>_arm64.AppImage
-       ├── DocChisel_<version>_armhf.deb
-       └── DocChisel_<version>_armhf.AppImage
+   ├── linux/
+   │   ├── DocChisel_<version>_x86_64.AppImage
+   │   ├── DocChisel_<version>_amd64.deb
+   │   ├── DocChisel_<version>_i386.deb
+   │   ├── DocChisel_<version>_i686.AppImage
+   │   ├── DocChisel_<version>_arm64.deb
+   │   ├── DocChisel_<version>_arm64.AppImage
+   │   ├── DocChisel_<version>_armhf.deb
+   │   └── DocChisel_<version>_armhf.AppImage
+   └── ios/
+       └── DocChisel_<version>.ipa
    ```
 3. Automatically runs intermediate cache pruning to reclaim disk space.
 
@@ -541,79 +665,79 @@ npm run package:artifacts
 
 ## 🧹 Maintenance, Cleanup & Safeguards
 
-Cross-platform builds can generate gigabytes of compiler scratchpads. DocChisel includes a 3-tier maintenance suite:
+Cross-platform builds can generate gigabytes of compiler scratchpads. DocChisel includes a clean maintenance protocol that preserves your finalized release binaries:
 
 ```bash
 # 1. Instant Safe Prune:
 # Deletes intermediate scratchpads (.cxx, Android intermediates, Cargo incremental caches)
 # without deleting built APKs, DMGs, or release binaries. Reclaims 5–15 GB instantly!
 npm run prune
-# or: npm run clean:intermediates
 
-# 2. Standard Clean:
-# Stops Gradle daemons, cleans Cargo target, Android, iOS & Expo caches
+# 2. Workspace Clean:
+# Stops Gradle daemons, cleans Cargo target directories, Android, iOS & Expo caches.
+# Strictly preserves the releases/ directory so your packaged binaries are never lost.
 npm run clean
 
-# 3. Deep Clean:
-# Performs a standard clean plus wipes the releases/ directory
-npm run clean:deep
-
-# 4. Targeted Cleans:
-npm run desktop:clean          # Cleans Desktop Vite and Tauri targets
-npm run mobile:clean:android   # Stops Gradle daemon and wipes Android build trees
-npm run mobile:clean:ios       # Wipes iOS DerivedData and Pods
-npm run mobile:clean:all       # Wipes all mobile caches
+# (Optional) Selective Clean Flags:
+npm run clean -- --desktop       # Clean desktop Vite & Tauri caches
+npm run clean -- --android       # Clean Android Gradle & C++ caches
+npm run clean -- --ios           # Clean iOS Xcode & CocoaPods caches
 ```
 
 ---
 
 ## ⚡ Convenience Scripts Reference
 
-| Command | Platform | Description |
-| :--- | :--- | :--- |
-| `npm run desktop:dev` | macOS, Win, Linux | Starts Tauri desktop app with hot reload |
-| `npm run desktop:dev:web` | Any | Runs browser preview on http://localhost:1420 |
-| `npm run desktop:package:mac-universal` | macOS Only | Packages Universal macOS DMG installer |
-| `npm run desktop:package:mac` | macOS Only | Packages Host-arch macOS DMG installer |
-| `npm run desktop:package:windows` | macOS, Win, Linux | Packages Windows NSIS Setup .exe installer |
-| `npm run desktop:package:linux` | Linux Only | Packages universal AppImage for host architecture |
-| `npm run desktop:package:all` | Any | Packages all desktop targets supported by host |
-| `npm run mobile:build-engine:android` | macOS, Win, Linux | Compiles dev native Rust engine for Android |
-| `npm run mobile:build-engine:android:release` | macOS, Win, Linux | Compiles release engine for all Android ABIs |
-| `npm run mobile:start` | macOS, Win, Linux | Starts Expo Metro bundler server |
-| `npm run mobile:android` | macOS, Win, Linux | Launches app on Android device / emulator |
-| `npm run mobile:build:apk-release` | macOS, Win, Linux | Builds 3 production APKs (arm64, armv7, universal) |
-| `npm run mobile:build:bundle` | macOS, Win, Linux | Builds Google Play release .aab |
-| `npm run package:artifacts` | macOS, Win, Linux | Gathers all release binaries into `releases/` |
-| `npm run generate:icons` | macOS, Win, Linux | Compiles brand SVGs into all platform icons |
-| `npm run prune` | macOS, Win, Linux | Prunes throwaway caches (reclaims 5–15 GB) |
-| `npm run clean` | macOS, Win, Linux | Standard full workspace cache clean |
-| `npm run check:all` | macOS, Win, Linux | Runs TypeScript checks & 12 Rust engine tests |
+| Command                                 | Platform          | Description                                                                   |
+| :-------------------------------------- | :---------------- | :---------------------------------------------------------------------------- |
+| `npm run desktop:dev`                   | macOS, Win, Linux | Starts Tauri desktop app with hot reload                                      |
+| `npm run desktop:package -- <platform>` | macOS, Win, Linux | Packages desktop app (`--mac`, `--windows`, `--linux`)                        |
+| `npm run linux:download`                | Any               | Downloads Linux multiarch packages from GitHub Actions                        |
+| `npm run mobile:start`                  | macOS, Win, Linux | Starts Expo Metro bundler for development build                               |
+| `npm run mobile:android`                | macOS, Win, Linux | Launches development build on connected Android device / emulator             |
+| `npm run mobile:ios`                    | macOS Exclusive   | Launches development build on iOS Simulator                                   |
+| `npm run mobile:package -- <platform>`  | macOS, Win, Linux | Packages mobile app (`--android` [with `--dev`/`--bundle`], `--ios`, `--all`) |
+| `npm run mobile:engine -- <platform>`   | macOS, Win, Linux | Compiles native Rust engine (`--android`, `--ios`, `--all`, `--release`)      |
+| `npm run package:artifacts`             | macOS, Win, Linux | Gathers all release binaries and dev APK into `releases/`                     |
+| `npm run generate:icons`                | macOS, Win, Linux | Compiles brand SVGs into all platform icons                                   |
+| `npm run prune`                         | macOS, Win, Linux | Prunes throwaway caches (reclaims 5–15 GB)                                    |
+| `npm run clean`                         | macOS, Win, Linux | Standard workspace cache clean (preserves `releases/`)                        |
+| `npm run typecheck`                     | macOS, Win, Linux | Runs TypeScript checks across all workspaces                                  |
+| `npm test`                              | macOS, Win, Linux | Runs all Rust workspace unit & integration tests                              |
+| `npm run check:all`                     | macOS, Win, Linux | Runs TypeScript checks & all 12 Rust engine tests                             |
 
 ---
 
 ## 🔧 Troubleshooting Guide
 
 ### 1. Android NDK "16 KB page-size alignment"
+
 Android 15+ devices require native ELF binaries to be aligned to 16 KB boundaries. DocChisel's `scripts/build-mobile-engine.mjs` automatically passes `-C link-arg=-Wl,-z,max-page-size=16384` to `cargo-ndk`. Ensure you compile with:
+
 ```bash
-npm run mobile:build-engine:android:release
+npm run mobile:engine -- --android --release
 ```
 
 ### 2. Missing `cargo-ndk`
+
 If Android engine compilation reports missing `cargo-ndk`:
+
 ```bash
 cargo install cargo-ndk
 ```
 
 ### 3. Missing Android targets in Rust
+
 If Android compilation fails due to missing standard libraries:
+
 ```bash
 rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android
 ```
 
 ### 4. Linux Desktop: WebKit2GTK not found
+
 If `pkg-config` cannot locate `webkit2gtk-4.1`:
+
 ```bash
 # Ubuntu / Debian
 sudo apt install -y libwebkit2gtk-4.1-dev libgtk-3-dev pkg-config
@@ -629,7 +753,9 @@ sudo zypper install -y webkit2gtk4-devel gtk3-devel pkg-config
 ```
 
 ### 5. Linux Desktop: AppImage FUSE Error
+
 Modern Linux distributions (Ubuntu 22.04+, Debian 12, Fedora, Arch, openSUSE) may not include FUSE v2 runtime by default:
+
 ```bash
 # Ubuntu / Debian
 sudo apt install -y libfuse2

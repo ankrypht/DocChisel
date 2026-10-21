@@ -7,7 +7,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const REPO_ROOT = path.resolve(__dirname, '..');
 
-const isDeep = process.argv.includes('--deep');
 const isIntermediates = process.argv.includes('--intermediates');
 const isDesktop = process.argv.includes('--desktop');
 const isMobileAndroid = process.argv.includes('--mobile-android') || process.argv.includes('--android');
@@ -24,7 +23,7 @@ if (isIntermediates) {
 const isSelective = isDesktop || isMobileAndroid || isMobileIos || isMobile;
 
 console.log('==================================================');
-console.log(`🧹 [DocChisel] Cleaning Build Artifacts & Caches ${isDeep ? '(Deep Mode)' : ''}`);
+console.log('🧹 [DocChisel] Cleaning Build Artifacts & Caches');
 if (isSelective) {
   const modes = [];
   if (isDesktop) modes.push('Desktop');
@@ -187,20 +186,7 @@ if (!isSelective) {
     removeSafe(path.join(REPO_ROOT, 'apps/desktop/src-tauri/target'), 'Desktop Tauri target directory');
   }
 
-  for (const plat of ['android', 'macos', 'windows', 'linux', 'ios']) {
-    const platReleasesDir = path.join(REPO_ROOT, 'releases', plat);
-    if (fs.existsSync(platReleasesDir) && fs.readdirSync(platReleasesDir).length === 0) {
-      removeSafe(platReleasesDir, `Empty releases/${plat} directory`);
-    }
-  }
-}
-
-// ----------------------------------------------------
-// 6. Deep mode: Clean releases directory
-// ----------------------------------------------------
-if (isDeep) {
-  console.log('==> Deep Mode: Removing releases directory...');
-  removeSafe(path.join(REPO_ROOT, 'releases'), 'Releases directory');
+  console.log('  ℹ️ Preserved releases/ directory.');
 }
 
 // Clean stray OS metadata across repo

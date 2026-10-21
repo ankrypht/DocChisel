@@ -80,11 +80,7 @@ let foundAndroidRelease = false;
 if (fs.existsSync(apkDir)) {
   const allApks = findFilesRecursive(apkDir, (name) => name.endsWith('.apk'));
 
-  // Prioritize release APKs
-  const releaseApks = allApks.filter((p) => p.toLowerCase().includes('release'));
-  const apksToProcess = releaseApks.length > 0 ? releaseApks : allApks;
-
-  for (const apkPath of apksToProcess) {
+  for (const apkPath of allApks) {
     const name = path.basename(apkPath).toLowerCase();
 
     // Explicitly DROP x86 (32-bit) and standalone x86_64 split APKs
@@ -92,7 +88,10 @@ if (fs.existsSync(apkDir)) {
       continue;
     }
 
-    if (name.includes('arm64-v8a')) {
+    if (name.includes('debug')) {
+      recordFile(apkPath, 'android', `DocChisel-${version}-dev.apk`);
+      foundAndroidRelease = true;
+    } else if (name.includes('arm64-v8a')) {
       recordFile(apkPath, 'android', `DocChisel-${version}-arm64-v8a-release.apk`);
       foundAndroidRelease = true;
     } else if (name.includes('armeabi-v7a')) {
@@ -292,12 +291,13 @@ if (count > 0) {
 } else {
   console.log('ℹ️ No newly built artifacts found yet to collect.');
   console.log('\nTo build finalized artifacts:');
-  console.log('  • Android APKs (3):  npm run mobile:build:apk-release');
-  console.log('  • Android AAB:       npm run mobile:build:bundle');
-  console.log('  • macOS Universal:   npm run desktop:package:mac-universal');
-  console.log('  • Windows NSIS:      npm run desktop:package:windows');
-  console.log('  • Linux DEB/AppImage:npm run desktop:package:linux');
-  console.log('  • All Desktop:       npm run desktop:package:all');
+  console.log('  • macOS DMG:         npm run desktop:package -- --mac');
+  console.log('  • Windows Setup:     npm run desktop:package -- --windows');
+  console.log('  • Linux Packages:    npm run desktop:package -- --linux');
+  console.log('  • Android Dev APK:   npm run mobile:package -- --android --dev');
+  console.log('  • Android APKs (3):  npm run mobile:package -- --android');
+  console.log('  • Android AAB:       npm run mobile:package -- --android --bundle');
+  console.log('  • iOS (.ipa):        npm run mobile:package -- --ios');
   console.log('\nAfter building, collect all binaries with:');
   console.log('  • npm run package:artifacts');
   console.log('==================================================');

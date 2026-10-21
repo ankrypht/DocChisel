@@ -1,0 +1,67 @@
+# EAS Build ignore file
+
+# Dependencies
+node_modules/
+
+# Git
+.git/
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Native & Signing
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Metro
+.metro-health-check*
+
+# Debug & Logs
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+*.log
+
+# macOS
+.DS_Store
+*.pem
+
+# Local env files
+.env*.local
+
+# TypeScript
+*.tsbuildinfo
+
+# Build outputs & binaries
+*.apk
+*.aab
+
+# Documentation & Marketing assets
+docs/
+CHANGELOG.md
+LICENSE
+README.md
+assets/screenshots/
+
+# Tests & Test Configs
+**/__tests__/**
+**/__snapshots__/**
+jest.setup.js
+coverage/
+
+# IDE & Tooling
+.vscode/
+.idea/
+*.iml
+.agents/
+skills-lock.json
+.antigravitycli
+.gemini/

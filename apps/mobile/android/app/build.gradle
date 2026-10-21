@@ -87,13 +87,20 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
+    def appVariant = System.getenv("APP_VARIANT") ?: (findProperty("APP_VARIANT") ?: "production")
+    def isDev = appVariant == "development"
+
     namespace 'com.ankushsarkar.docchisel'
     defaultConfig {
-        applicationId 'com.ankushsarkar.docchisel'
+        applicationId isDev ? 'com.ankushsarkar.docchisel.dev' : 'com.ankushsarkar.docchisel'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "0.1.0"
+
+        manifestPlaceholders = [
+            appName: isDev ? "DocChisel (Dev)" : "DocChisel"
+        ]
 
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
     }

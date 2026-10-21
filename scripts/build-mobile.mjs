@@ -9,30 +9,153 @@ const REPO_ROOT = path.resolve(__dirname, '..');
 const ANDROID_DIR = path.join(REPO_ROOT, 'apps/mobile/android');
 const JNI_LIBS_DIR = path.join(REPO_ROOT, 'apps/mobile/modules/docchisel-bridge/android/src/main/jniLibs');
 
+let version = '0.1.0';
+try {
+  const pkgData = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'package.json'), 'utf8'));
+  if (pkgData.version) version = pkgData.version;
+} catch {}
+
 const args = process.argv.slice(2);
+
+const isAndroid = args.includes('--android') || args.includes('-a');
+const isIos = args.includes('--ios') || args.includes('-i');
+const isAll = args.includes('--all');
+
+const isDev = args.includes('--dev') || args.includes('--debug') || args.includes('--apk-debug') || process.env.APP_VARIANT === 'development';
+const isBundle = args.includes('--bundle') || args.includes('--aab');
+const isReleaseApk = args.includes('--apk-release') || args.includes('--release') || (!isDev && !isBundle);
+
+if (isDev) {
+  process.env.APP_VARIANT = 'development';
+}
+
+function handleIosPackaging(isDevMode) {
+  let hasXcode = false;
+  try {
+    const xcodePath = execSync('xcode-select -p', { encoding: 'utf8' }).trim();
+    hasXcode = !!xcodePath;
+  } catch {}
+
+  const iosEngineLib = path.join(REPO_ROOT, 'apps/mobile/modules/docchisel-bridge/ios/libcore_engine.a');
+  if (!fs.existsSync(iosEngineLib)) {
+    console.log('\n==> ℹ️ Compiling native iOS Rust core engine for docchisel-bridge...');
+    const buildEngineScript = path.join(REPO_ROOT, 'scripts/build-mobile-engine.mjs');
+    const engineArgs = isDevMode ? ['--ios'] : ['--ios', '--release'];
+    const res = spawnSync('node', [buildEngineScript, ...engineArgs], {
+      cwd: REPO_ROOT,
+      stdio: 'inherit',
+    });
+    if (res.status !== 0) {
+      console.warn('⚠️ Warning: iOS native engine compilation encountered an issue.');
+    }
+  }
+
+  console.log('==================================================');
+  console.log(`🍎 [DocChisel] iOS Packaging Pipeline (${isDevMode ? 'Development' : 'Production Release'})`);
+  console.log('==================================================');
+  console.log(`   Host OS:    macOS (${process.arch})`);
+  console.log(`   Xcode SDK:  ${hasXcode ? 'Available' : 'Missing (Install Xcode from Mac App Store)'}`);
+  console.log(`   Engine:     ${fs.existsSync(iosEngineLib) ? 'libcore_engine.a compiled' : 'Not found'}`);
+  console.log('==================================================\n');
+
+  if (isDevMode) {
+    console.log('📲 How to Build & Run Development Client on iOS:');
+    console.log('--------------------------------------------------');
+    console.log('Option 1: Run in iOS Simulator (Fastest):');
+    console.log('  npm run mobile:engine -- --ios');
+    console.log('  npm run mobile:ios');
+    console.log('\nOption 2: Build Local Dev Client for Physical iPhone via EAS CLI:');
+    console.log('  npx eas-cli build --platform ios --profile development --local');
+    console.log('\nOption 3: Live Hot Reload with Expo Dev Client:');
+    console.log('  1. Run: npm run mobile:start');
+    console.log('  2. Scan the terminal QR code using your iPhone camera or Expo Dev Client.');
+  } else {
+    console.log('📦 How to Package iOS Production Release (.ipa / App Store Archive):');
+    console.log('--------------------------------------------------');
+    console.log('Option 1: Local EAS Build (Recommended - Zero-config .ipa):');
+    console.log('  npx eas-cli build --platform ios --profile production --local');
+    console.log('\nOption 2: Native Xcode GUI Packaging (App Store Connect / Ad Hoc):');
+    console.log('  1. Generate the native Xcode workspace:');
+    console.log('     npx --workspace=@docchisel/mobile expo prebuild --platform ios --clean');
+    console.log('  2. Open the workspace in Xcode:');
+    console.log('     open apps/mobile/ios/DocChisel.xcworkspace');
+    console.log('  3. In Xcode: Select target "Any iOS Device (arm64)", go to Product > Archive');
+    console.log('  4. In Organizer: Click "Distribute App" -> export .ipa or upload to TestFlight');
+    console.log('\nOption 3: Command-Line Xcode Archive & Export:');
+    console.log('  xcodebuild -workspace apps/mobile/ios/DocChisel.xcworkspace \\');
+    console.log('    -scheme DocChisel -configuration Release -sdk iphoneos \\');
+    console.log('    -archivePath apps/mobile/ios/build/DocChisel.xcarchive archive');
+    console.log('\nOption 4: Cloud EAS Build (Expo Application Services):');
+    console.log('  npx eas-cli build --platform ios --profile production');
+  }
+  console.log('==================================================\n');
+}
 
 if (args.includes('--help') || args.includes('-h')) {
   console.log('==================================================');
-  console.log('📱 [DocChisel] Android Build & Packaging Pipeline');
+  console.log('📱 [DocChisel] Mobile Build & Packaging Pipeline');
   console.log('==================================================');
-  console.log('Usage: node scripts/build-mobile.mjs [options]');
-  console.log('\nOptions:');
-  console.log('  • --apk-release  Build 3 release APKs (arm64-v8a, armeabi-v7a, universal) [default]');
-  console.log('  • --bundle       Build optimized release .aab for Google Play Store');
-  console.log('  • --apk-debug    Build debug APK for rapid local testing');
-  console.log('  • --help, -h     Show this help message');
+  console.log('Usage: npm run mobile:package -- <platform> [options]');
+  console.log('\nTarget Platforms:');
+  console.log('  • --android        Package Android application (.apk / .aab)');
+  console.log('  • --ios            Package iOS application (macOS host exclusive)');
+  console.log('  • --all            Package both Android and iOS applications');
+  console.log('\nAndroid Options (used with --android):');
+  console.log('  • --dev            Build development client APK (DocChisel (Dev), com.ankushsarkar.docchisel.dev)');
+  console.log('                     Ready to transfer and run directly on physical Android devices!');
+  console.log('  • --release        Build 3 production release APKs (arm64, armv7, universal) [default]');
+  console.log('  • --bundle         Build production Google Play Store App Bundle (.aab)');
+  console.log('\niOS Options (used with --ios, macOS exclusive):');
+  console.log('  • --dev            Build development client for iOS Simulator / physical device');
+  console.log('  • --release        Package production App Store release / export .ipa [default]');
+  console.log('  • --help, -h       Show this help message');
   console.log('==================================================');
   process.exit(0);
 }
 
-const isDebug = args.includes('--apk-debug') || args.includes('--debug');
-const isBundle = args.includes('--bundle') || args.includes('--aab');
-const isReleaseApk = args.includes('--apk-release') || args.includes('--release') || (!isDebug && !isBundle);
+if (!isAndroid && !isIos && !isAll) {
+  console.error('==================================================');
+  console.error('❌ Error: No mobile target platform specified.');
+  console.error('Usage: npm run mobile:package -- <platform> [options]');
+  console.error('\nTarget Platforms:');
+  console.error('  • --android        Package Android application (.apk / .aab)');
+  console.error('  • --ios            Package iOS application (macOS host exclusive)');
+  console.error('  • --all            Package both Android and iOS applications');
+  console.error('\nAndroid Options (used with --android):');
+  console.error('  • --dev            Build development client APK (DocChisel (Dev), com.ankushsarkar.docchisel.dev)');
+  console.error('                     Ready to transfer and run directly on physical Android devices!');
+  console.error('  • --release        Build 3 production release APKs (arm64, armv7, universal) [default]');
+  console.error('  • --bundle         Build production Google Play Store App Bundle (.aab)');
+  console.error('\niOS Options (used with --ios, macOS exclusive):');
+  console.error('  • --dev            Build development client for iOS Simulator / physical device');
+  console.error('  • --release        Package production App Store release / export .ipa [default]');
+  console.error('==================================================');
+  process.exit(1);
+}
+
+// iOS Exclusivity Safeguard
+if (isIos && process.platform !== 'darwin') {
+  console.error('==================================================');
+  console.error('❌ Error: iOS packaging requires a macOS host with Xcode installed.');
+  console.error(`   Current host platform: ${process.platform} (${process.arch})`);
+  console.error('==================================================');
+  process.exit(1);
+}
+
+if (isAll && process.platform !== 'darwin') {
+  console.log('⚠️  Notice: Skipping iOS packaging (requires macOS with Xcode).');
+}
+
+if (isIos && !isAndroid && !isAll) {
+  handleIosPackaging(isDev);
+  process.exit(0);
+}
 
 console.log('==================================================');
 console.log('📱 [DocChisel] Android Build & Packaging Pipeline');
 console.log(`   Host OS:   ${process.platform} (${process.arch})`);
-console.log(`   Operation: ${isBundle ? 'Google Play App Bundle (.aab)' : (isDebug ? 'Debug APK (.apk)' : 'Release APKs (arm64, armv7, universal)')}`);
+console.log(`   Operation: ${isBundle ? 'Google Play App Bundle (.aab)' : (isDev ? 'Development APK (.apk)' : 'Release APKs (arm64, armv7, universal)')}`);
+console.log(`   Variant:   ${isDev ? 'Development (com.ankushsarkar.docchisel.dev)' : 'Production (com.ankushsarkar.docchisel)'}`);
 console.log('==================================================');
 
 function formatBytes(bytes) {
@@ -143,7 +266,7 @@ if (!fs.existsSync(arm64So)) {
   console.log('\n==> ℹ️ Android native Rust core engine not yet compiled for jniLibs.');
   console.log('    Triggering automatic build-mobile-engine...');
   const buildEngineScript = path.join(REPO_ROOT, 'scripts/build-mobile-engine.mjs');
-  const engineArgs = isDebug
+  const engineArgs = isDev
     ? ['--android']
     : ['--release', '--android'];
 
@@ -154,7 +277,7 @@ if (!fs.existsSync(arm64So)) {
 
   if (engineRes.status !== 0 || !fs.existsSync(arm64So)) {
     console.error('\n❌ Error: Failed to compile Android native engine in jniLibs.');
-    console.error('   Run manually: npm run mobile:build-engine:android');
+    console.error(`   Run manually: npm run mobile:engine -- --android${isDev ? '' : ' --release'}`);
     process.exit(1);
   }
 } else {
@@ -189,7 +312,7 @@ if (!isWin) {
 const gradleTasks = [];
 if (isBundle) {
   gradleTasks.push('bundleRelease', '-PreactNativeArchitectures=armeabi-v7a,arm64-v8a,x86_64');
-} else if (isDebug) {
+} else if (isDev) {
   gradleTasks.push('assembleDebug');
 } else {
   gradleTasks.push('assembleRelease', '-PreactNativeArchitectures=armeabi-v7a,arm64-v8a,x86_64');
@@ -254,9 +377,40 @@ if (artifacts.length > 0) {
     const stats = fs.statSync(art);
     console.log(`  • ${path.basename(art)} (${formatBytes(stats.size)})`);
   }
-  console.log('\nTo collect into the unified releases/ directory:');
-  console.log('  npm run package:artifacts');
+
+  if (isDev) {
+    const debugApk = artifacts.find((a) => path.basename(a).toLowerCase().includes('debug'));
+    if (debugApk) {
+      const releasesAndroidDir = path.join(REPO_ROOT, 'releases/android');
+      fs.mkdirSync(releasesAndroidDir, { recursive: true });
+      const devApkTarget = path.join(releasesAndroidDir, `DocChisel-${version}-dev.apk`);
+      fs.copyFileSync(debugApk, devApkTarget);
+      const devStats = fs.statSync(devApkTarget);
+      console.log(`\n  ✓ Saved Dev APK to: releases/android/DocChisel-${version}-dev.apk (${formatBytes(devStats.size)})`);
+    }
+
+    console.log('\n==================================================');
+    console.log('📲 How to Install & Run on Your Physical Android Device:');
+    console.log('==================================================');
+    console.log('Method 1: Direct Install via USB ADB (Fastest):');
+    console.log(`  adb install -r releases/android/DocChisel-${version}-dev.apk`);
+    console.log('\nMethod 2: Direct File Transfer (USB / Wireless Share):');
+    console.log(`  Copy "releases/android/DocChisel-${version}-dev.apk" to your phone's Downloads folder,`);
+    console.log('  tap the APK in your phone\'s file manager, and choose "Install".');
+    console.log('\nMethod 3: Live Hot Reload with Expo Dev Client:');
+    console.log('  1. Run: npm run mobile:start');
+    console.log('  2. Ensure your phone & computer are on the same Wi-Fi network');
+    console.log('  3. Open "DocChisel (Dev)" on your device and scan the terminal QR code!');
+    console.log('==================================================');
+  } else {
+    console.log('\nTo collect all release binaries into the unified releases/ directory:');
+    console.log('  npm run package:artifacts');
+  }
 } else {
   console.warn('⚠️ Warning: Build succeeded but no output binaries were found in app/build/outputs.');
 }
 console.log('==================================================\n');
+
+if (isAll && process.platform === 'darwin') {
+  handleIosPackaging(isDev);
+}

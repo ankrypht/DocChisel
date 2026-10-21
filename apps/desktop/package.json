@@ -6,21 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "typecheck": "tsc --noEmit",
     "tauri": "tauri",
-    "tauri:dev": "tauri dev",
-    "tauri:build:no-bundle": "tauri build --no-bundle",
-    "test": "cargo test --package DocChisel",
-    "build:debug": "tauri build --debug",
-    "build:mac": "node ../../scripts/build-desktop.mjs --mac",
-    "build:mac:debug": "node ../../scripts/build-desktop.mjs --mac --debug",
-    "build:mac-universal": "node ../../scripts/build-desktop.mjs --mac-universal",
-    "build:windows": "node ../../scripts/build-desktop.mjs --windows",
-    "build:windows:debug": "node ../../scripts/build-desktop.mjs --windows --debug",
-    "build:linux": "node ../../scripts/build-desktop.mjs --linux",
-    "build:linux:debug": "node ../../scripts/build-desktop.mjs --linux --debug",
-    "build:all": "node ../../scripts/build-desktop.mjs --all",
-    "clean": "node ../../scripts/clean.mjs --desktop"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@docchisel/shared": "*",

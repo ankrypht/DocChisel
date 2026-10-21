@@ -20,7 +20,18 @@ const isWindows = args.includes('--windows') || args.includes('--win') || platfo
 const isLinuxDeb = args.includes('--linux-deb') || (platformVal === 'linux' && args.includes('--deb'));
 const isLinuxAppImage = args.includes('--linux-appimage') || (platformVal === 'linux' && args.includes('--appimage'));
 const isLinux = args.includes('--linux') || isLinuxDeb || isLinuxAppImage || platformVal === 'linux';
-const isAll = args.includes('--all') || platformVal === 'all';
+const hasAll = args.includes('--all') || platformVal === 'all';
+if (hasAll) {
+  console.error('==================================================');
+  console.error("❌ Error: The '--all' flag is not supported for desktop packaging.");
+  console.error('   Realistically, no host OS can build all desktop targets simultaneously:');
+  console.error('   • macOS DMG requires a macOS host (Apple Cocoa frameworks and hdiutil).');
+  console.error('   • Linux .deb / .AppImage requires a Linux host (WebKit2GTK 4.1).');
+  console.error('   • Windows NSIS .exe is native on Windows, and cross-compilable from macOS/Linux.');
+  console.error('\n   Please specify a single target platform: --mac, --windows, or --linux.');
+  console.error('==================================================');
+  process.exit(1);
+}
 
 // Linux architecture mappings (64-bit and 32-bit for both AMD and ARM)
 const LINUX_ARCH_MAP = {
@@ -82,17 +93,25 @@ const passthroughArgs = args.filter((arg, i) => {
   return true;
 });
 
-if (!isMac && !isWindows && !isLinux && !isAll) {
+if (!isMac && !isWindows && !isLinux) {
   console.error('==================================================');
   console.error('❌ Error: No desktop platform specified.');
-  console.error('Please specify a desktop platform:');
-  console.error('  • macOS (Universal): npm run desktop:package:mac-universal (or --mac-universal)');
-  console.error('  • macOS (Host):      npm run desktop:package:mac           (or --mac)');
-  console.error('  • Windows (NSIS):    npm run desktop:package:windows       (or --windows)');
-  console.error('  • Linux (AppImage):  npm run desktop:package:linux         (or --linux)');
-  console.error('  • All Available:     npm run desktop:package:all           (or --all)');
-  console.error('  • Linux Options:     --arch <x64|x86|arm64|armhf> | --deb | --all-arch');
-  console.error('  • Platform option:   node scripts/build-desktop.mjs --platform <mac|windows|linux|all>');
+  console.error('Usage: npm run desktop:package -- <platform> [options]');
+  console.error('\nTarget Platforms:');
+  console.error('  • --mac / --mac-universal   Package macOS Universal DMG (macOS exclusive)');
+  console.error('  • --windows                 Package Windows NSIS Setup .exe (native on Win, cross-compiles on Mac/Linux)');
+  console.error('  • --linux                   Package Linux AppImage & Debian package (Linux exclusive)');
+  console.error('\nSingle-format or specific architecture options:');
+  console.error('  # npm run desktop:package -- --linux --deb            # .deb package only');
+  console.error('  # npm run desktop:package -- --linux --appimage       # .AppImage only');
+  console.error('  # npm run desktop:package -- --linux --arch arm64     # 64-bit ARM target');
+  console.error('  # npm run desktop:package -- --linux --all-arch       # All 4 Linux architectures');
+  console.error('\nLinux Architecture Options:');
+  console.error('  • --arch x64 (or amd64)     64-bit AMD/Intel (x86_64-unknown-linux-gnu)');
+  console.error('  • --arch arm64 (or aarch64) 64-bit ARM (aarch64-unknown-linux-gnu)');
+  console.error('  • --arch x86 (or i686)      32-bit AMD/Intel (i686-unknown-linux-gnu)');
+  console.error('  • --arch armhf (or armv7)   32-bit ARM (armv7-unknown-linux-gnueabihf)');
+  console.error('  • --all-arch                Build all 4 Linux architectures sequentially');
   console.error('==================================================');
   process.exit(1);
 }
@@ -148,16 +167,13 @@ function findArtifacts(searchDirs, filterFn) {
 console.log('==================================================');
 console.log(`🖥️  [DocChisel] Building Desktop Application (${isDebug ? 'Debug' : 'Release'})`);
 console.log(`   Host Platform: ${process.platform} (${process.arch})`);
-if (isAll) console.log('   Target Filter: All supported desktop platforms');
-else {
-  if (isMac) console.log(`   Target Filter: macOS ${isMacUniversal ? '(Universal Apple Silicon + Intel)' : '(Host Architecture)'}`);
-  if (isWindows) console.log('   Target Filter: Windows (NSIS Setup .exe)');
-  if (isLinux) {
-    const archLabel = isAllLinuxArch
-      ? 'All 4 Architectures (64/32-bit AMD & ARM)'
-      : (selectedLinuxArchKey ? LINUX_ARCH_MAP[selectedLinuxArchKey].label : (explicitTarget || 'Host Architecture'));
-    console.log(`   Target Filter: Linux ${isLinuxDeb ? '(.deb only)' : (isLinuxAppImage ? '(.AppImage only)' : '(.deb + .AppImage)')} - [${archLabel}]`);
-  }
+if (isMac) console.log(`   Target Filter: macOS ${isMacUniversal ? '(Universal Apple Silicon + Intel)' : '(Host Architecture)'}`);
+if (isWindows) console.log('   Target Filter: Windows (NSIS Setup .exe)');
+if (isLinux) {
+  const archLabel = isAllLinuxArch
+    ? 'All 4 Architectures (64/32-bit AMD & ARM)'
+    : (selectedLinuxArchKey ? LINUX_ARCH_MAP[selectedLinuxArchKey].label : (explicitTarget || 'Host Architecture'));
+  console.log(`   Target Filter: Linux ${isLinuxDeb ? '(.deb only)' : (isLinuxAppImage ? '(.AppImage only)' : '(.deb + .AppImage)')} - [${archLabel}]`);
 }
 console.log('==================================================');
 
@@ -167,19 +183,15 @@ let buildSuccess = true;
 // ----------------------------------------------------
 // 1. macOS Build
 // ----------------------------------------------------
-if (isMac || isAll) {
+if (isMac) {
   console.log('\n--------------------------------------------------');
   console.log(`🍎 Building macOS DMG Installer ${isMacUniversal ? '(Universal)' : ''}`);
   console.log('--------------------------------------------------');
 
   if (process.platform !== 'darwin') {
-    if (isAll) {
-      console.log('  ⚠️ Skipping macOS build (macOS DMG bundles must be built on macOS).');
-    } else {
-      console.error('❌ Error: macOS DMG bundles can only be built natively on macOS.');
-      console.error('   Apple codesigning, hdiutil, and Cocoa frameworks require a macOS host.');
-      process.exit(1);
-    }
+    console.error('❌ Error: macOS DMG bundles can only be built natively on macOS.');
+    console.error('   Apple codesigning, hdiutil, and Cocoa frameworks require a macOS host.');
+    process.exit(1);
   } else {
     const tauriArgs = ['tauri', 'build', '--bundles', 'dmg'];
     if (isDebug) tauriArgs.push('--debug');
@@ -230,7 +242,7 @@ if (isMac || isAll) {
 // ----------------------------------------------------
 // 2. Windows Build
 // ----------------------------------------------------
-if (isWindows || isAll) {
+if (isWindows) {
   console.log('\n--------------------------------------------------');
   console.log('🪟 Building Windows NSIS Setup Installer (.exe)');
   console.log('--------------------------------------------------');
@@ -261,11 +273,7 @@ if (isWindows || isAll) {
       } else {
         console.error('   Install via apt:      sudo apt update && sudo apt install -y nsis');
       }
-      if (isAll) {
-        buildSuccess = false;
-      } else {
-        process.exit(1);
-      }
+      process.exit(1);
     } else {
       console.log('  ✓ makensis found');
     }
@@ -281,11 +289,7 @@ if (isWindows || isAll) {
     if (!hasCargoXwin) {
       console.error('\n❌ cargo-xwin not found.');
       console.error('   Install via Cargo: cargo install cargo-xwin');
-      if (isAll) {
-        buildSuccess = false;
-      } else {
-        process.exit(1);
-      }
+      process.exit(1);
     } else {
       console.log('  ✓ cargo-xwin found');
     }
@@ -334,11 +338,7 @@ if (isWindows || isAll) {
         } else {
           console.error('   Install via apt:      sudo apt update && sudo apt install -y llvm lld');
         }
-        if (isAll) {
-          buildSuccess = false;
-        } else {
-          process.exit(1);
-        }
+        process.exit(1);
       }
     } else {
       console.log('  ✓ llvm-rc found in PATH');
@@ -411,7 +411,7 @@ if (isWindows || isAll) {
 // ----------------------------------------------------
 // 3. Linux Build
 // ----------------------------------------------------
-if (isLinux || (isAll && process.platform === 'linux')) {
+if (isLinux) {
   let bundleTypes = 'deb,appimage';
   if (isLinuxDeb && !isLinuxAppImage) bundleTypes = 'deb';
   else if (isLinuxAppImage && !isLinuxDeb) bundleTypes = 'appimage';
@@ -422,17 +422,13 @@ if (isLinux || (isAll && process.platform === 'linux')) {
   console.log('--------------------------------------------------');
 
   if (process.platform !== 'linux') {
-    if (isAll) {
-      console.log('  ⚠️ Skipping Linux build (Linux GUI packages require a Linux environment with WebKit2GTK).');
-    } else {
-      console.error('❌ Error: Linux desktop packages (.deb / .AppImage) require a Linux environment with WebKit2GTK.');
-      console.error('   WebKit2GTK 4.1 and GTK3 are dynamic Linux system C libraries.');
-      console.error('\nTo build Linux packages without a local Linux machine:');
-      console.error('  1. Run the automated GitHub Actions workflow: .github/workflows/build-linux.yml');
-      console.error('  2. Download the built packages locally with: npm run linux:download');
-      console.error('\nOr run natively on a Linux host (Ubuntu, Debian, Fedora, Arch Linux, etc.).');
-      process.exit(1);
-    }
+    console.error('❌ Error: Linux desktop packages (.deb / .AppImage) require a Linux environment with WebKit2GTK.');
+    console.error('   WebKit2GTK 4.1 and GTK3 are dynamic Linux system C libraries.');
+    console.error('\nTo build Linux packages without a local Linux machine:');
+    console.error('  1. Run the automated GitHub Actions workflow: .github/workflows/build-linux.yml');
+    console.error('  2. Download the built packages locally with: npm run linux:download');
+    console.error('\nOr run natively on a Linux host (Ubuntu, Debian, Fedora, Arch Linux, etc.).');
+    process.exit(1);
   } else {
     // Verify WebKitGTK / GTK3 dependencies
     if (commandExists('pkg-config')) {

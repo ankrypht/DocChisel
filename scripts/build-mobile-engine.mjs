@@ -18,20 +18,33 @@ const customTarget = targetArgIndex !== -1 ? process.argv[targetArgIndex + 1] : 
 
 if (!isAndroidOnly && !isIosOnly && !isAll) {
   console.error('==================================================');
-  console.error('❌ Error: No target platform specified for mobile engine build.');
-  console.error('Please specify a target platform:');
-  console.error('  • Android (dev):     npm run mobile:build-engine:android');
-  console.error('  • Android (release): npm run mobile:build-engine:android:release');
-  console.error('  • iOS (dev):         npm run mobile:build-engine:ios');
-  console.error('  • iOS (release):     npm run mobile:build-engine:ios:release');
-  console.error('  • All platforms:     npm run mobile:build-engine:all');
-  console.error('  • All (release):     npm run mobile:build-engine:all:release');
+  console.error('❌ Error: No mobile target platform specified.');
+  console.error('Usage: npm run mobile:engine -- <platform> [options]');
+  console.error('\nTarget Platforms:');
+  console.error('  • --android    Build native engine for Android (JNI libs in modules/docchisel-bridge)');
+  console.error('  • --ios        Build native engine for iOS (macOS host exclusive)');
+  console.error('  • --all        Build native engine for both Android and iOS');
+  console.error('\nOptions:');
+  console.error('  • --release    Build optimized release binaries (default is dev/debug)');
+  console.error('  • --prune      Prune intermediate build caches after compilation');
   console.error('==================================================');
   process.exit(1);
 }
 
-const shouldBuildIos = isIosOnly || isAll;
+// iOS Exclusivity Safeguard
+if (isIosOnly && process.platform !== 'darwin') {
+  console.error('==================================================');
+  console.error('❌ Error: iOS native engine compilation requires macOS with Xcode installed.');
+  console.error(`   Current host platform: ${process.platform} (${process.arch})`);
+  console.error('==================================================');
+  process.exit(1);
+}
+
 const shouldBuildAndroid = isAndroidOnly || isAll;
+const shouldBuildIos = (isIosOnly || isAll) && process.platform === 'darwin';
+if (isAll && process.platform !== 'darwin') {
+  console.log('⚠️  Notice: Skipping iOS engine compilation (requires macOS with Xcode).');
+}
 
 console.log('==================================================');
 console.log(`==> [DocChisel] Building Core Engine for Mobile (${isRelease ? 'Release' : 'Dev'})`);
@@ -192,6 +205,21 @@ if (shouldBuildAndroid) {
 if (shouldBuildIos) {
   if (process.platform === 'darwin') {
     console.log('==> Compiling for iOS targets...');
+
+    // Auto-verify and add required iOS rustup targets
+    try {
+      const installed = execSync('rustup target list --installed', { encoding: 'utf8' });
+      const requiredIosTargets = ['aarch64-apple-ios-sim', 'aarch64-apple-ios'];
+      for (const t of requiredIosTargets) {
+        if (!installed.includes(t)) {
+          console.log(`  ℹ️ Adding missing rustup target: ${t}...`);
+          execSync(`rustup target add ${t}`, { stdio: 'inherit' });
+        }
+      }
+    } catch (err) {
+      console.warn(`  ⚠️ Could not verify iOS rustup targets: ${err.message}`);
+    }
+
     const buildArgs = ['build', '--package', 'core_engine'];
     if (isRelease) buildArgs.push('--release');
 
