@@ -210,18 +210,23 @@ npm run desktop:package:windows
 # (Supported on: macOS ONLY - Exclusive)
 npm run desktop:package:mac-universal
 
-# Linux: Compiles universal standalone AppImage (runs on ANY Linux distribution)
-# (Supported on: Linux ONLY - Exclusive)
+# Linux: Compiles .deb and universal standalone AppImage (runs on ANY Linux distribution)
+# (Supported on: Linux native, or automated via GitHub Actions for macOS/Windows developers)
 npm run desktop:package:linux
+
+# Download Linux packages built by GitHub Actions directly to releases/linux/:
+npm run linux:download
 
 # All Supported Desktop Targets for your current host:
 npm run desktop:package:all
 ```
 
 > [!NOTE]
-> **Linux Universal Format & Multi-Architecture Notes**:
-> - **Universal Format**: The primary output for Linux is **AppImage** (`DocChisel_<version>_<arch>.AppImage`). AppImages are self-contained and run out-of-the-box on **any** Linux distribution (Ubuntu, Debian, Fedora, Arch, openSUSE, etc.) without installation. (Pass `--deb` if you also need a Debian `.deb` package).
-> - **Can you build for all 4 architectures on any Linux machine?** **No.** Unlike macOS (which creates a single fat Mach-O Universal binary via `lipo` containing both Apple Silicon and Intel code), Linux ELF binaries are strictly per-architecture. Because Tauri links against system C dynamic libraries (`libwebkit2gtk-4.1.so` and `libgtk-3.so`), bare-metal cross-compiling these GUI libraries across CPU architectures (e.g. from an x86_64 PC to ARM64, or vice versa) cannot be done out-of-the-box simply via `rustup target add`. To build all 4 architecture packages (`x86_64`, `i686`, `arm64`, `armhf`), builds must be run on their respective native hosts/devices/VMs or within multiarch Docker containers using QEMU.
+> **Linux Multi-Architecture & Cloud Build (GitHub Actions)**:
+> - **Formats Generated**: Every architecture produces both Debian `.deb` and universal `.AppImage` packages.
+> - **Building from macOS / Windows**: Because Linux GUI apps link dynamically against WebKit2GTK 4.1 and GTK3, they cannot be compiled directly on Darwin or Windows hosts without Linux environments.
+> - **GitHub Actions Workflow**: A complete workflow (`.github/workflows/build-linux.yml`) is provided that builds all 4 architectures (`x86_64`, `arm64`, `i686`, `armhf`) in the cloud and bundles all 8 `.deb` and `.AppImage` files into a single zip artifact (`docchisel-linux-all-v<version>.zip`).
+> - **Download**: You can download the zip directly from the GitHub Actions run page, or run `npm run linux:download` to automatically fetch and place them into `releases/linux/`.
 
 ### 🎯 Collect All Final Binaries
 ```bash

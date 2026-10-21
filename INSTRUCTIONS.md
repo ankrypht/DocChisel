@@ -45,7 +45,7 @@ DocChisel is engineered to run and build natively on developer workstations with
 | **Android** | 3 APKs + 1 AAB | ✅ **Yes** | ✅ **Yes** | ✅ **Yes** | **Native on all 3 hosts** using Android SDK, NDK, and `cargo-ndk`. |
 | **Windows** | NSIS Setup `.exe` | ✅ **Yes** | ✅ **Yes** | ✅ **Yes** | **Native on Windows** (MSVC + NSIS); **Cross-compiled on macOS & Linux** via `cargo-xwin` + `makensis` + LLVM/LLD. |
 | **macOS** | Universal `.dmg` | ✅ **Yes** | ❌ **No** | ❌ **No** | **macOS Exclusive**. Requires Apple Cocoa frameworks, codesigning, and `hdiutil` DMG creation. |
-| **Linux** | `.deb` + `.AppImage` | ❌ **No** | ❌ **No** | ✅ **Yes** | **Linux Exclusive**. Requires GTK3 & WebKit2GTK 4.1 C libraries and dynamic linkers. |
+| **Linux** | `.deb` + `.AppImage` | ☁️ **GitHub Actions** | ☁️ **GitHub Actions** | ✅ **Yes** | **Linux Exclusive locally** (WebKit2GTK/GTK3). Automated across all 4 architectures via GitHub Actions (`build-linux.yml`). |
 | **iOS** | `.ipa` / Simulator | ✅ **Yes** | ❌ **No** | ❌ **No** | **macOS Exclusive**. Requires Xcode and iOS SDKs (untested/unreleased). |
 
 ### Why Are Some Targets Exclusive?
@@ -407,13 +407,20 @@ npm run desktop:package:linux
   ```
 
 > [!IMPORTANT]
-> **Can you build for all 4 Linux architectures on any single Linux machine?**
-> **No.** Unlike macOS (which creates a single fat Mach-O Universal binary via `lipo` containing both Apple Silicon and Intel code), Linux ELF binaries are strictly per-architecture.
-> Furthermore, Tauri applications dynamically link against host C system libraries (`libwebkit2gtk-4.1.so`, `libgtk-3.so`, GLib, and libc). Bare-metal cross-compiling these GUI C libraries across CPU architectures (e.g. from an x86_64 PC to ARM64, or vice versa) cannot be done out-of-the-box simply via `rustup target add` because the target CPU's C dynamic libraries are missing from your system.
->
-> **How to build for all 4 architectures**:
-> 1. **Native Host / Devices**: Run `npm run desktop:package:linux` on a machine, VM, or SBC running each architecture (x86_64 PC, 32-bit VM, Raspberry Pi 5 / ARM64 cloud instance, 32-bit ARM SBC).
-> 2. **Multiarch Containers with QEMU**: Run the build within Docker multiarch containers (e.g., `docker run --platform linux/arm64 ...`).
+> **Building Linux Packages from macOS / Windows without Local VMs or Docker**:
+> Because Linux GUI packages link dynamically against WebKit2GTK 4.1 and GTK3 C libraries, local macOS and Windows machines cannot compile native Linux packages directly.
+> 
+> **Solution: Automated GitHub Actions Workflow**
+> A ready-to-run GitHub Actions workflow (`.github/workflows/build-linux.yml`) compiles both `.deb` and `.AppImage` packages across all 4 architectures in the cloud and bundles them for download:
+> - **64-bit AMD/Intel**: `DocChisel_<version>_x86_64.AppImage` & `DocChisel_<version>_amd64.deb` (native `ubuntu-22.04` runner)
+> - **64-bit ARM**: `DocChisel_<version>_arm64.AppImage` & `DocChisel_<version>_arm64.deb` (native `ubuntu-24.04-arm` runner)
+> - **32-bit AMD/Intel**: `DocChisel_<version>_i686.AppImage` & `DocChisel_<version>_i386.deb` (32-bit multiarch on `ubuntu-22.04`)
+> - **32-bit ARM**: `DocChisel_<version>_armhf.AppImage` & `DocChisel_<version>_armhf.deb` (cross-toolchain + QEMU on `ubuntu-22.04`)
+> 
+> **How to Trigger & Download**:
+> 1. In GitHub, go to **Actions** → **Build Linux Packages (.deb & AppImage)** → **Run workflow**.
+> 2. Once completed, download `docchisel-linux-all-v<version>.zip` directly from the workflow run page (under **Artifacts**).
+> 3. Alternatively, run `npm run linux:download` locally to automatically fetch and place the files into `releases/linux/`.
 
 - **Safeguard**: Running this script on macOS or Windows will halt with an explicit notification explaining Linux exclusivity.
 

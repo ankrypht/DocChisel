@@ -412,21 +412,25 @@ if (isWindows || isAll) {
 // 3. Linux Build
 // ----------------------------------------------------
 if (isLinux || (isAll && process.platform === 'linux')) {
-  let bundleTypes = 'appimage';
-  if (isLinuxDeb) bundleTypes = 'deb';
+  let bundleTypes = 'deb,appimage';
+  if (isLinuxDeb && !isLinuxAppImage) bundleTypes = 'deb';
+  else if (isLinuxAppImage && !isLinuxDeb) bundleTypes = 'appimage';
   if (args.includes('--all-formats') || args.includes('--all-bundles') || (isLinuxDeb && isLinuxAppImage)) bundleTypes = 'deb,appimage';
 
   console.log('\n--------------------------------------------------');
-  console.log(`🐧 Building Linux Package (${bundleTypes === 'appimage' ? 'Universal AppImage' : (bundleTypes === 'deb' ? 'DEB only' : 'AppImage + DEB')})`);
+  console.log(`🐧 Building Linux Package (${bundleTypes === 'appimage' ? 'Universal AppImage only' : (bundleTypes === 'deb' ? 'DEB only' : 'AppImage + DEB')})`);
   console.log('--------------------------------------------------');
 
   if (process.platform !== 'linux') {
     if (isAll) {
       console.log('  ⚠️ Skipping Linux build (Linux GUI packages require a Linux environment with WebKit2GTK).');
     } else {
-      console.error('❌ Error: Linux desktop packages (.deb / .AppImage) can only be built natively on a Linux host.');
+      console.error('❌ Error: Linux desktop packages (.deb / .AppImage) require a Linux environment with WebKit2GTK.');
       console.error('   WebKit2GTK 4.1 and GTK3 are dynamic Linux system C libraries.');
-      console.error('\nTo build Linux packages, run natively on Linux (Ubuntu, Debian, Fedora, Arch Linux, etc.).');
+      console.error('\nTo build Linux packages without a local Linux machine:');
+      console.error('  1. Run the automated GitHub Actions workflow: .github/workflows/build-linux.yml');
+      console.error('  2. Download the built packages locally with: npm run linux:download');
+      console.error('\nOr run natively on a Linux host (Ubuntu, Debian, Fedora, Arch Linux, etc.).');
       process.exit(1);
     }
   } else {
@@ -440,8 +444,6 @@ if (isLinux || (isAll && process.platform === 'linux')) {
         console.warn('     If build fails, install via: sudo apt install -y libwebkit2gtk-4.1-dev libgtk-3-dev');
       }
     }
-
-
 
     // Determine target architectures to compile
     const targetsToBuild = [];
@@ -463,6 +465,42 @@ if (isLinux || (isAll && process.platform === 'linux')) {
     for (const tConfig of targetsToBuild) {
       console.log(`\n==> Packaging for Linux Architecture: [${tConfig.label}]`);
 
+      const buildEnv = { ...process.env };
+      if (!buildEnv.APPIMAGE_EXTRACT_AND_RUN) {
+        buildEnv.APPIMAGE_EXTRACT_AND_RUN = '1';
+      }
+
+      // Configure cross-compilation toolchains if targeting non-host Linux architecture
+      if (tConfig.target === 'i686-unknown-linux-gnu' && process.arch !== 'ia32') {
+        buildEnv.PKG_CONFIG_ALLOW_CROSS = '1';
+        if (!buildEnv.PKG_CONFIG_PATH && fs.existsSync('/usr/lib/i386-linux-gnu/pkgconfig')) {
+          buildEnv.PKG_CONFIG_PATH = '/usr/lib/i386-linux-gnu/pkgconfig:/usr/share/pkgconfig';
+        }
+        if (!buildEnv.CC_i686_unknown_linux_gnu && commandExists('gcc')) {
+          buildEnv.CC_i686_unknown_linux_gnu = 'gcc';
+        }
+        if (!buildEnv.CXX_i686_unknown_linux_gnu && commandExists('g++')) {
+          buildEnv.CXX_i686_unknown_linux_gnu = 'g++';
+        }
+        if (!buildEnv.CARGO_TARGET_I686_UNKNOWN_LINUX_GNU_RUSTFLAGS) {
+          buildEnv.CARGO_TARGET_I686_UNKNOWN_LINUX_GNU_RUSTFLAGS = '-C link-arg=-m32';
+        }
+      } else if (tConfig.target === 'armv7-unknown-linux-gnueabihf' && process.arch !== 'arm') {
+        buildEnv.PKG_CONFIG_ALLOW_CROSS = '1';
+        if (!buildEnv.PKG_CONFIG_PATH && fs.existsSync('/usr/lib/arm-linux-gnueabihf/pkgconfig')) {
+          buildEnv.PKG_CONFIG_PATH = '/usr/lib/arm-linux-gnueabihf/pkgconfig:/usr/share/pkgconfig';
+        }
+        if (!buildEnv.CARGO_TARGET_ARMV7_UNKNOWN_LINUX_GNUEABIHF_LINKER && commandExists('arm-linux-gnueabihf-gcc')) {
+          buildEnv.CARGO_TARGET_ARMV7_UNKNOWN_LINUX_GNUEABIHF_LINKER = 'arm-linux-gnueabihf-gcc';
+        }
+        if (!buildEnv.CC_armv7_unknown_linux_gnueabihf && commandExists('arm-linux-gnueabihf-gcc')) {
+          buildEnv.CC_armv7_unknown_linux_gnueabihf = 'arm-linux-gnueabihf-gcc';
+        }
+        if (!buildEnv.CXX_armv7_unknown_linux_gnueabihf && commandExists('arm-linux-gnueabihf-g++')) {
+          buildEnv.CXX_armv7_unknown_linux_gnueabihf = 'arm-linux-gnueabihf-g++';
+        }
+      }
+
       // Auto-verify and add rustup target if cross-compiling
       if (tConfig.target && commandExists('rustup')) {
         try {
@@ -483,7 +521,7 @@ if (isLinux || (isAll && process.platform === 'linux')) {
       if (isDebug) tauriArgs.push('--debug');
       tauriArgs.push(...passthroughArgs);
 
-      const ok = runTauriBuild(tauriArgs);
+      const ok = runTauriBuild(tauriArgs, buildEnv);
       if (!ok) {
         console.error(`\n❌ Linux build failed for ${tConfig.label}.`);
         buildSuccess = false;
