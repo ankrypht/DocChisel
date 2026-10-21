@@ -54,6 +54,26 @@ function cleanModuleAndroid(moduleDir) {
   if (fs.existsSync(androidCxx)) removeSafe(androidCxx, `${path.relative(REPO_ROOT, moduleDir)}/android/.cxx`);
 }
 
+function purgeOsMetadata(targetDir) {
+  if (!targetDir || !fs.existsSync(targetDir)) return;
+  const isWin = process.platform === 'win32';
+  if (isWin) {
+    try {
+      execSync('attrib -r -s -h Thumbs.db /s 2>nul & attrib -r -s -h desktop.ini /s 2>nul & del /s /q /f /a Thumbs.db desktop.ini ehthumbs.db .DS_Store 2>nul || exit 0', {
+        cwd: targetDir,
+        stdio: 'ignore',
+        shell: 'cmd.exe',
+      });
+    } catch {}
+  } else {
+    try {
+      execSync(`find "${targetDir}" \\( -name ".DS_Store" -o -name "Thumbs.db" -o -name "desktop.ini" -o -name "ehthumbs.db" \\) -delete 2>/dev/null || true`, {
+        stdio: 'ignore',
+      });
+    } catch {}
+  }
+}
+
 // ----------------------------------------------------
 // 1. Desktop Cleaning
 // ----------------------------------------------------
@@ -120,6 +140,15 @@ if (isMobile || isMobileAndroid || !isSelective) {
       }
     } catch {}
   }
+
+  try {
+    purgeOsMetadata(path.join(REPO_ROOT, 'apps/mobile'));
+    const gradleHome = process.env.GRADLE_USER_HOME ||
+      (process.env.HOME ? path.join(process.env.HOME, '.gradle') : (process.env.USERPROFILE ? path.join(process.env.USERPROFILE, '.gradle') : null));
+    if (gradleHome && fs.existsSync(path.join(gradleHome, 'caches'))) {
+      purgeOsMetadata(path.join(gradleHome, 'caches'));
+    }
+  } catch {}
 }
 
 // ----------------------------------------------------
@@ -173,5 +202,10 @@ if (isDeep) {
   console.log('==> Deep Mode: Removing releases directory...');
   removeSafe(path.join(REPO_ROOT, 'releases'), 'Releases directory');
 }
+
+// Clean stray OS metadata across repo
+try {
+  purgeOsMetadata(REPO_ROOT);
+} catch {}
 
 console.log('\n✅ Cleanup Complete!\n==================================================');

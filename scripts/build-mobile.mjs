@@ -60,6 +60,26 @@ function findFilesRecursive(dir, filterFn, maxDepth = 8, currentDepth = 0) {
   return results;
 }
 
+function purgeOsMetadata(targetDir) {
+  if (!targetDir || !fs.existsSync(targetDir)) return;
+  const isWin = process.platform === 'win32';
+  if (isWin) {
+    try {
+      execSync('attrib -r -s -h Thumbs.db /s 2>nul & attrib -r -s -h desktop.ini /s 2>nul & del /s /q /f /a Thumbs.db desktop.ini ehthumbs.db .DS_Store 2>nul || exit 0', {
+        cwd: targetDir,
+        stdio: 'ignore',
+        shell: 'cmd.exe',
+      });
+    } catch {}
+  } else {
+    try {
+      execSync(`find "${targetDir}" \\( -name ".DS_Store" -o -name "Thumbs.db" -o -name "desktop.ini" -o -name "ehthumbs.db" \\) -delete 2>/dev/null || true`, {
+        stdio: 'ignore',
+      });
+    } catch {}
+  }
+}
+
 // ----------------------------------------------------
 // 1. Validate Android SDK & Environment Variables
 // ----------------------------------------------------
@@ -142,7 +162,19 @@ if (!fs.existsSync(arm64So)) {
 }
 
 // ----------------------------------------------------
-// 4. Execute Gradle Build
+// 4. Sanitize OS Metadata (Prevents Android Prefab Crash)
+// ----------------------------------------------------
+try {
+  purgeOsMetadata(path.join(REPO_ROOT, 'apps/mobile'));
+  const gradleHome = process.env.GRADLE_USER_HOME ||
+    (process.env.HOME ? path.join(process.env.HOME, '.gradle') : (process.env.USERPROFILE ? path.join(process.env.USERPROFILE, '.gradle') : null));
+  if (gradleHome && fs.existsSync(path.join(gradleHome, 'caches'))) {
+    purgeOsMetadata(path.join(gradleHome, 'caches'));
+  }
+} catch {}
+
+// ----------------------------------------------------
+// 5. Execute Gradle Build
 // ----------------------------------------------------
 const isWin = process.platform === 'win32';
 const gradlewCmd = isWin ? 'gradlew.bat' : './gradlew';
@@ -173,7 +205,7 @@ const buildRes = spawnSync(gradlewCmd, gradleTasks, {
 });
 
 // ----------------------------------------------------
-// 5. Always Stop Gradle Daemon to release file locks & RAM
+// 6. Always Stop Gradle Daemon to release file locks & RAM
 // ----------------------------------------------------
 console.log('\n==> Stopping Gradle daemon...');
 try {
@@ -191,7 +223,7 @@ if (buildRes.status !== 0) {
 }
 
 // ----------------------------------------------------
-// 6. Clean Intermediate Build Bloat (Without rm -rf)
+// 7. Clean Intermediate Build Bloat (Without rm -rf)
 // ----------------------------------------------------
 console.log('==> Reclaiming intermediate build scratchpads...');
 const scratchPaths = [
@@ -208,7 +240,7 @@ for (const p of scratchPaths) {
 console.log('  ✓ Cleaned build intermediates & CMake caches');
 
 // ----------------------------------------------------
-// 7. Verify & Display Generated Artifacts
+// 8. Verify & Display Generated Artifacts
 // ----------------------------------------------------
 const outDir = path.join(ANDROID_DIR, 'app/build/outputs');
 const filterExt = isBundle ? '.aab' : '.apk';

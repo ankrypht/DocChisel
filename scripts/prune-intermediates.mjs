@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -58,6 +59,26 @@ function removeDirectory(targetPath, description) {
     }
   } catch (err) {
     console.warn(`  ⚠️ Failed to remove ${targetPath}: ${err.message}`);
+  }
+}
+
+function purgeOsMetadata(targetDir) {
+  if (!targetDir || !fs.existsSync(targetDir)) return;
+  const isWin = process.platform === 'win32';
+  if (isWin) {
+    try {
+      execSync('attrib -r -s -h Thumbs.db /s 2>nul & attrib -r -s -h desktop.ini /s 2>nul & del /s /q /f /a Thumbs.db desktop.ini ehthumbs.db .DS_Store 2>nul || exit 0', {
+        cwd: targetDir,
+        stdio: 'ignore',
+        shell: 'cmd.exe',
+      });
+    } catch {}
+  } else {
+    try {
+      execSync(`find "${targetDir}" \\( -name ".DS_Store" -o -name "Thumbs.db" -o -name "desktop.ini" -o -name "ehthumbs.db" \\) -delete 2>/dev/null || true`, {
+        stdio: 'ignore',
+      });
+    } catch {}
   }
 }
 
@@ -196,6 +217,16 @@ if (fs.existsSync(targetDir)) {
     findIncremental(targetDir);
   } catch {}
 }
+
+// 6. Stray OS Metadata (.DS_Store, Thumbs.db, desktop.ini)
+try {
+  purgeOsMetadata(REPO_ROOT);
+  const gradleHome = process.env.GRADLE_USER_HOME ||
+    (process.env.HOME ? path.join(process.env.HOME, '.gradle') : (process.env.USERPROFILE ? path.join(process.env.USERPROFILE, '.gradle') : null));
+  if (gradleHome && fs.existsSync(path.join(gradleHome, 'caches'))) {
+    purgeOsMetadata(path.join(gradleHome, 'caches'));
+  }
+} catch {}
 
 console.log('==================================================');
 if (prunedCount > 0) {
