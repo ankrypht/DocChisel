@@ -54,28 +54,41 @@ function getGitHubToken() {
 
 function extractZip(zipPath, targetDir) {
   fs.mkdirSync(targetDir, { recursive: true });
+  let lastError = null;
   if (commandExists('unzip')) {
     try {
-      execSync(`unzip -qo "${zipPath}" -d "${targetDir}"`, { stdio: 'ignore', env: getExpandedEnv() });
-      return true;
-    } catch {}
+      execSync(`unzip -qo "${zipPath}" -d "${targetDir}"`, {
+        stdio: ['ignore', 'pipe', 'pipe'],
+        env: getExpandedEnv(),
+      });
+      return { success: true };
+    } catch (err) {
+      lastError = err.stderr ? err.stderr.toString() : err.message;
+    }
   }
   if (process.platform === 'win32') {
     try {
       execSync(
         `powershell -NoProfile -Command "Expand-Archive -Force -Path '${zipPath}' -DestinationPath '${targetDir}'"`,
-        { stdio: 'ignore' }
+        { stdio: ['ignore', 'pipe', 'pipe'] }
       );
-      return true;
-    } catch {}
+      return { success: true };
+    } catch (err) {
+      lastError = err.stderr ? err.stderr.toString() : err.message;
+    }
   }
   if (commandExists('tar')) {
     try {
-      execSync(`tar -xf "${zipPath}" -C "${targetDir}"`, { stdio: 'ignore', env: getExpandedEnv() });
-      return true;
-    } catch {}
+      execSync(`tar -xf "${zipPath}" -C "${targetDir}"`, {
+        stdio: ['ignore', 'pipe', 'pipe'],
+        env: getExpandedEnv(),
+      });
+      return { success: true };
+    } catch (err) {
+      lastError = err.stderr ? err.stderr.toString() : err.message;
+    }
   }
-  return false;
+  return { success: false, error: lastError || 'No zip extraction tool succeeded.' };
 }
 
 function getRepoSlug() {
@@ -247,12 +260,23 @@ async function main() {
     console.log(`==> Found local archive: ${localZip}`);
     console.log('==> Extracting and organizing release packages into releases/linux/...');
     const stagingDir = path.join(releasesDir, `_staging_local_${Date.now()}`);
-    if (extractZip(localZip, stagingDir)) {
+    const res = extractZip(localZip, stagingDir);
+    if (res.success) {
       organizeDownloadedFiles(stagingDir);
       try {
         fs.rmSync(stagingDir, { recursive: true, force: true });
       } catch {}
       downloaded = true;
+    } else {
+      console.error(`\n❌ Could not extract local archive: ${localZip}`);
+      if (res.error) console.error(`   ${res.error.trim()}`);
+      if (process.platform === 'darwin' && localZip.includes('/Downloads/')) {
+        console.error('\n💡 macOS blocks Terminal processes from reading ~/Downloads without special privacy permissions.');
+        console.error('   Please drag or copy the zip file into the project releases/ directory:');
+        console.error('   cp ~/Downloads/docchisel-linux-all-v*.zip releases/');
+        console.error('   npm run linux:download\n');
+      }
+      process.exit(1);
     }
   }
 
@@ -287,7 +311,8 @@ async function main() {
           await downloadWithProgress(archiveUrl, headers, zipPath, latestArtifact.size_in_bytes);
 
           console.log('==> Extracting release packages...');
-          if (extractZip(zipPath, stagingDir)) {
+          const extRes = extractZip(zipPath, stagingDir);
+          if (extRes.success) {
             organizeDownloadedFiles(stagingDir);
             try {
               fs.rmSync(stagingDir, { recursive: true, force: true });
