@@ -39,7 +39,7 @@ DocChisel is engineered to run and build natively on developer machines without 
 | **Android** | 3 APKs + 1 AAB | ✅ **Yes** | ✅ **Yes** | ✅ **Yes** | **Native on all 3 hosts** via Android SDK, NDK, and `cargo-ndk`. |
 | **Windows** | NSIS Setup `.exe` | ✅ **Yes** | ✅ **Yes** | ✅ **Yes** | **Native on Windows** (MSVC + NSIS); **Cross-compiled on macOS & Linux** via `cargo-xwin` + `makensis` + LLVM/LLD. |
 | **macOS** | Universal `.dmg` | ✅ **Yes** | ❌ **No** | ❌ **No** | **macOS Exclusive**. Requires Apple Cocoa frameworks, codesigning, and `hdiutil` DMG creation. |
-| **Linux** | `.deb` + `.AppImage` | ❌ **No** | ❌ **No** | ✅ **Yes** | **Linux Exclusive**. Requires GTK3 & WebKit2GTK 4.1 C libraries and dynamic linkers. |
+| **Linux** | `.deb` + `.AppImage` (64/32-bit AMD & ARM) | ❌ **No** | ❌ **No** | ✅ **Yes** | **Linux Exclusive**. Supports 64-bit AMD (`amd64`), 32-bit AMD (`i386`/`i686`), 64-bit ARM (`arm64`), and 32-bit ARM (`armhf`). |
 | **iOS** | `.ipa` / Simulator | ✅ **Yes** | ❌ **No** | ❌ **No** | **macOS Exclusive**. Requires Xcode and iOS SDKs (untested/unreleased). |
 
 > [!NOTE]
@@ -140,6 +140,12 @@ npm run check:all
     ```bash
     sudo pacman -S --needed webkit2gtk-4.1 base-devel curl wget file openssl appmenu-gtk-module libappindicator-gtk3 librsvg xdotool pkgconf
     ```
+- **Rust Linux Targets (64-bit and 32-bit AMD & ARM)**:
+  ```bash
+  rustup target add x86_64-unknown-linux-gnu i686-unknown-linux-gnu aarch64-unknown-linux-gnu armv7-unknown-linux-gnueabihf
+  # (Optional: for 32-bit x86 cross-compilation on 64-bit Ubuntu/Debian):
+  # sudo apt install -y gcc-multilib g++-multilib
+  ```
 - **For Android Development**: Install [Android Studio for Linux](https://developer.android.com/studio), configure `ANDROID_HOME`, and install `cargo-ndk`:
   ```bash
   cargo install cargo-ndk
@@ -204,13 +210,18 @@ npm run desktop:package:windows
 # (Supported on: macOS ONLY - Exclusive)
 npm run desktop:package:mac-universal
 
-# Linux: Compiles Debian package (.deb) and standalone AppImage
+# Linux: Compiles universal standalone AppImage (runs on ANY Linux distribution)
 # (Supported on: Linux ONLY - Exclusive)
 npm run desktop:package:linux
 
 # All Supported Desktop Targets for your current host:
 npm run desktop:package:all
 ```
+
+> [!NOTE]
+> **Linux Universal Format & Multi-Architecture Notes**:
+> - **Universal Format**: The primary output for Linux is **AppImage** (`DocChisel_<version>_<arch>.AppImage`). AppImages are self-contained and run out-of-the-box on **any** Linux distribution (Ubuntu, Debian, Fedora, Arch, openSUSE, etc.) without installation. (Pass `--deb` if you also need a Debian `.deb` package).
+> - **Can you build for all 4 architectures on any Linux machine?** **No.** Unlike macOS (which creates a single fat Mach-O Universal binary via `lipo` containing both Apple Silicon and Intel code), Linux ELF binaries are strictly per-architecture. Because Tauri links against system C dynamic libraries (`libwebkit2gtk-4.1.so` and `libgtk-3.so`), bare-metal cross-compiling these GUI libraries across CPU architectures (e.g. from an x86_64 PC to ARM64, or vice versa) cannot be done out-of-the-box simply via `rustup target add`. To build all 4 architecture packages (`x86_64`, `i686`, `arm64`, `armhf`), builds must be run on their respective native hosts/devices/VMs or within multiarch Docker containers using QEMU.
 
 ### 🎯 Collect All Final Binaries
 ```bash

@@ -18,8 +18,6 @@
     "desktop:package:windows:debug": "node scripts/build-desktop.mjs --windows --debug",
     "desktop:package:linux": "node scripts/build-desktop.mjs --linux",
     "desktop:package:linux:debug": "node scripts/build-desktop.mjs --linux --debug",
-    "desktop:package:linux:deb": "node scripts/build-desktop.mjs --linux-deb",
-    "desktop:package:linux:appimage": "node scripts/build-desktop.mjs --linux-appimage",
     "desktop:package:all": "node scripts/build-desktop.mjs --all",
     "desktop:test": "cargo test --package DocChisel",
     "desktop:clean": "node scripts/clean.mjs --desktop",

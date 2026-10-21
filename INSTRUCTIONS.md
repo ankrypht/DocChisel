@@ -236,6 +236,12 @@ npm run check:all
        xdotool \
        pkgconf
      ```
+   - **Rust Linux Targets (64-bit & 32-bit AMD and ARM)**:
+     ```bash
+     rustup target add x86_64-unknown-linux-gnu i686-unknown-linux-gnu aarch64-unknown-linux-gnu armv7-unknown-linux-gnueabihf
+     # (Optional: for 32-bit x86 builds on 64-bit Ubuntu/Debian):
+     # sudo apt install -y gcc-multilib g++-multilib libc6-dev-i386
+     ```
 2. **Android Development Tools**:
    - Install [Android Studio for Linux](https://developer.android.com/studio).
    - Install JDK 17:
@@ -377,25 +383,38 @@ npm run desktop:dev
 
 #### 2. Production Packaging:
 ```bash
-# Build both Debian (.deb) package and standalone AppImage
+# Build the universal standalone AppImage for your host architecture:
 npm run desktop:package:linux
 
-# Or build individually:
-npm run desktop:package:linux:deb
-npm run desktop:package:linux:appimage
+# (Optional: pass --deb if you also need a Debian package, or specify an architecture):
+# npm run desktop:package:linux -- --deb
+# npm run desktop:package:linux -- --arch arm64
 ```
-- **Output Files**:
-  - `DocChisel_<version>_amd64.deb`
-  - `DocChisel_<version>_amd64.AppImage`
-- **Installing & Running on Linux**:
+- **Universal Output Format**:
+  - **64-bit AMD/Intel**: `DocChisel_<version>_x86_64.AppImage` (and `DocChisel_<version>_amd64.deb` if `--deb` is passed)
+  - **32-bit AMD/Intel**: `DocChisel_<version>_i686.AppImage` (and `DocChisel_<version>_i386.deb` if `--deb` is passed)
+  - **64-bit ARM**: `DocChisel_<version>_arm64.AppImage` (and `DocChisel_<version>_arm64.deb` if `--deb` is passed)
+  - **32-bit ARM**: `DocChisel_<version>_armhf.AppImage` (and `DocChisel_<version>_armhf.deb` if `--deb` is passed)
+- **Installing & Running on ANY Linux Distribution**:
+  AppImages are self-contained and distribution-agnostic (Ubuntu, Debian, Fedora, Arch, openSUSE, Mint, etc.):
   ```bash
-  # AppImage:
-  chmod +x DocChisel_*_amd64.AppImage
-  ./DocChisel_*_amd64.AppImage
+  # AppImage (runs everywhere):
+  chmod +x DocChisel_*_*.AppImage
+  ./DocChisel_*_*.AppImage
 
-  # Debian/Ubuntu:
-  sudo apt install ./DocChisel_*_amd64.deb
+  # Debian/Ubuntu (.deb if built):
+  sudo apt install ./DocChisel_*_*.deb
   ```
+
+> [!IMPORTANT]
+> **Can you build for all 4 Linux architectures on any single Linux machine?**
+> **No.** Unlike macOS (which creates a single fat Mach-O Universal binary via `lipo` containing both Apple Silicon and Intel code), Linux ELF binaries are strictly per-architecture.
+> Furthermore, Tauri applications dynamically link against host C system libraries (`libwebkit2gtk-4.1.so`, `libgtk-3.so`, GLib, and libc). Bare-metal cross-compiling these GUI C libraries across CPU architectures (e.g. from an x86_64 PC to ARM64, or vice versa) cannot be done out-of-the-box simply via `rustup target add` because the target CPU's C dynamic libraries are missing from your system.
+>
+> **How to build for all 4 architectures**:
+> 1. **Native Host / Devices**: Run `npm run desktop:package:linux` on a machine, VM, or SBC running each architecture (x86_64 PC, 32-bit VM, Raspberry Pi 5 / ARM64 cloud instance, 32-bit ARM SBC).
+> 2. **Multiarch Containers with QEMU**: Run the build within Docker multiarch containers (e.g., `docker run --platform linux/arm64 ...`).
+
 - **Safeguard**: Running this script on macOS or Windows will halt with an explicit notification explaining Linux exclusivity.
 
 ---
@@ -465,8 +484,14 @@ npm run package:artifacts
    ├── windows/
    │   └── DocChisel_<version>_x64-setup.exe
    └── linux/
+       ├── DocChisel_<version>_x86_64.AppImage
        ├── DocChisel_<version>_amd64.deb
-       └── DocChisel_<version>_amd64.AppImage
+       ├── DocChisel_<version>_i386.deb
+       ├── DocChisel_<version>_i686.AppImage
+       ├── DocChisel_<version>_arm64.deb
+       ├── DocChisel_<version>_arm64.AppImage
+       ├── DocChisel_<version>_armhf.deb
+       └── DocChisel_<version>_armhf.AppImage
    ```
 3. Automatically runs intermediate cache pruning to reclaim disk space.
 
@@ -509,7 +534,7 @@ npm run mobile:clean:all       # Wipes all mobile caches
 | `npm run desktop:package:mac-universal` | macOS Only | Packages Universal macOS DMG installer |
 | `npm run desktop:package:mac` | macOS Only | Packages Host-arch macOS DMG installer |
 | `npm run desktop:package:windows` | macOS, Win, Linux | Packages Windows NSIS Setup .exe installer |
-| `npm run desktop:package:linux` | Linux Only | Packages Linux DEB & AppImage |
+| `npm run desktop:package:linux` | Linux Only | Packages universal AppImage for host architecture |
 | `npm run desktop:package:all` | Any | Packages all desktop targets supported by host |
 | `npm run mobile:build-engine:android` | macOS, Win, Linux | Compiles dev native Rust engine for Android |
 | `npm run mobile:build-engine:android:release` | macOS, Win, Linux | Compiles release engine for all Android ABIs |

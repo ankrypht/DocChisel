@@ -19,8 +19,6 @@
     "build:windows:debug": "node ../../scripts/build-desktop.mjs --windows --debug",
     "build:linux": "node ../../scripts/build-desktop.mjs --linux",
     "build:linux:debug": "node ../../scripts/build-desktop.mjs --linux --debug",
-    "build:linux:deb": "node ../../scripts/build-desktop.mjs --linux-deb",
-    "build:linux:appimage": "node ../../scripts/build-desktop.mjs --linux-appimage",
     "build:all": "node ../../scripts/build-desktop.mjs --all",
     "clean": "node ../../scripts/clean.mjs --desktop"
   },

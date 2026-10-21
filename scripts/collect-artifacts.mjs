@@ -179,23 +179,68 @@ for (const sDir of desktopSearchDirs) {
   }
 }
 
-// 4. Linux Desktop (.deb and .AppImage ONLY; NEVER .rpm)
-console.log('==> Checking for Linux packages...');
+// 4. Linux Desktop (.deb and .AppImage across 64-bit & 32-bit AMD/ARM; NEVER .rpm)
+console.log('==> Checking for Linux packages (64-bit & 32-bit AMD and ARM)...');
+const collectedLinuxDebs = new Set();
+const collectedLinuxAppImages = new Set();
+
 for (const sDir of desktopSearchDirs) {
   // DEB package
   const debs = findFilesRecursive(sDir, (name) => name.toLowerCase().endsWith('.deb'));
   for (const deb of debs) {
-    const base = path.basename(deb);
-    const arch = base.includes('arm64') ? 'arm64' : 'amd64';
-    recordFile(deb, 'linux', `DocChisel_${version}_${arch}.deb`);
+    const base = path.basename(deb).toLowerCase();
+    const full = deb.replace(/\\/g, '/').toLowerCase();
+
+    let arch = 'amd64';
+    if (base.includes('arm64') || base.includes('aarch64') || full.includes('aarch64-unknown-linux-gnu')) {
+      arch = 'arm64';
+    } else if (base.includes('armhf') || base.includes('armv7') || full.includes('armv7-unknown-linux-gnueabihf')) {
+      arch = 'armhf';
+    } else if (base.includes('i386') || base.includes('i686') || (base.includes('x86') && !base.includes('x86_64')) || full.includes('i686-unknown-linux-gnu')) {
+      arch = 'i386';
+    } else if (base.includes('amd64') || base.includes('x86_64') || full.includes('x86_64-unknown-linux-gnu')) {
+      arch = 'amd64';
+    } else {
+      if (process.arch === 'arm64') arch = 'arm64';
+      else if (process.arch === 'arm') arch = 'armhf';
+      else if (process.arch === 'ia32') arch = 'i386';
+      else arch = 'amd64';
+    }
+
+    const finalName = `DocChisel_${version}_${arch}.deb`;
+    if (!collectedLinuxDebs.has(finalName)) {
+      recordFile(deb, 'linux', finalName);
+      collectedLinuxDebs.add(finalName);
+    }
   }
 
   // AppImage
   const appImages = findFilesRecursive(sDir, (name) => name.toLowerCase().endsWith('.appimage'));
   for (const appImage of appImages) {
-    const base = path.basename(appImage);
-    const arch = base.includes('arm64') ? 'arm64' : 'amd64';
-    recordFile(appImage, 'linux', `DocChisel_${version}_${arch}.AppImage`);
+    const base = path.basename(appImage).toLowerCase();
+    const full = appImage.replace(/\\/g, '/').toLowerCase();
+
+    let arch = 'x86_64';
+    if (base.includes('arm64') || base.includes('aarch64') || full.includes('aarch64-unknown-linux-gnu')) {
+      arch = 'arm64';
+    } else if (base.includes('armhf') || base.includes('armv7') || full.includes('armv7-unknown-linux-gnueabihf')) {
+      arch = 'armhf';
+    } else if (base.includes('i386') || base.includes('i686') || (base.includes('x86') && !base.includes('x86_64')) || full.includes('i686-unknown-linux-gnu')) {
+      arch = 'i686';
+    } else if (base.includes('amd64') || base.includes('x86_64') || full.includes('x86_64-unknown-linux-gnu')) {
+      arch = 'x86_64';
+    } else {
+      if (process.arch === 'arm64') arch = 'arm64';
+      else if (process.arch === 'arm') arch = 'armhf';
+      else if (process.arch === 'ia32') arch = 'i686';
+      else arch = 'x86_64';
+    }
+
+    const finalName = `DocChisel_${version}_${arch}.AppImage`;
+    if (!collectedLinuxAppImages.has(finalName)) {
+      recordFile(appImage, 'linux', finalName);
+      collectedLinuxAppImages.add(finalName);
+    }
   }
 }
 

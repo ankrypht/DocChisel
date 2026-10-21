@@ -22,12 +22,63 @@ const isLinuxAppImage = args.includes('--linux-appimage') || (platformVal === 'l
 const isLinux = args.includes('--linux') || isLinuxDeb || isLinuxAppImage || platformVal === 'linux';
 const isAll = args.includes('--all') || platformVal === 'all';
 
+// Linux architecture mappings (64-bit and 32-bit for both AMD and ARM)
+const LINUX_ARCH_MAP = {
+  amd64: { target: 'x86_64-unknown-linux-gnu', label: '64-bit AMD/Intel (x86_64 / amd64)', debArch: 'amd64', appImageArch: 'amd64' },
+  x64: { target: 'x86_64-unknown-linux-gnu', label: '64-bit AMD/Intel (x86_64 / amd64)', debArch: 'amd64', appImageArch: 'amd64' },
+  x86_64: { target: 'x86_64-unknown-linux-gnu', label: '64-bit AMD/Intel (x86_64 / amd64)', debArch: 'amd64', appImageArch: 'amd64' },
+
+  i686: { target: 'i686-unknown-linux-gnu', label: '32-bit AMD/Intel (x86 / i686 / i386)', debArch: 'i386', appImageArch: 'i686' },
+  i386: { target: 'i686-unknown-linux-gnu', label: '32-bit AMD/Intel (x86 / i686 / i386)', debArch: 'i386', appImageArch: 'i686' },
+  x86: { target: 'i686-unknown-linux-gnu', label: '32-bit AMD/Intel (x86 / i686 / i386)', debArch: 'i386', appImageArch: 'i686' },
+  ia32: { target: 'i686-unknown-linux-gnu', label: '32-bit AMD/Intel (x86 / i686 / i386)', debArch: 'i386', appImageArch: 'i686' },
+
+  arm64: { target: 'aarch64-unknown-linux-gnu', label: '64-bit ARM (aarch64 / arm64)', debArch: 'arm64', appImageArch: 'arm64' },
+  aarch64: { target: 'aarch64-unknown-linux-gnu', label: '64-bit ARM (aarch64 / arm64)', debArch: 'arm64', appImageArch: 'arm64' },
+
+  armhf: { target: 'armv7-unknown-linux-gnueabihf', label: '32-bit ARM (armv7 / armhf)', debArch: 'armhf', appImageArch: 'armhf' },
+  armv7: { target: 'armv7-unknown-linux-gnueabihf', label: '32-bit ARM (armv7 / armhf)', debArch: 'armhf', appImageArch: 'armhf' },
+  arm: { target: 'armv7-unknown-linux-gnueabihf', label: '32-bit ARM (armv7 / armhf)', debArch: 'armhf', appImageArch: 'armhf' },
+};
+
+const archIndex = args.indexOf('--arch');
+const archVal = archIndex !== -1 ? args[archIndex + 1]?.toLowerCase() : null;
+
+const targetIndex = args.indexOf('--target');
+const explicitTarget = targetIndex !== -1 ? args[targetIndex + 1] : null;
+
+const isAllLinuxArch = args.includes('--all-arch') || args.includes('--all-linux-arch');
+const isX64Arch = args.includes('--x64') || args.includes('--amd64') || args.includes('--x86_64');
+const isX86Arch = args.includes('--x86') || args.includes('--i686') || args.includes('--i386');
+const isArm64Arch = args.includes('--arm64') || args.includes('--aarch64');
+const isArmhfArch = args.includes('--armhf') || args.includes('--armv7');
+
+let selectedLinuxArchKey = null;
+if (archVal && LINUX_ARCH_MAP[archVal]) selectedLinuxArchKey = archVal;
+else if (isX64Arch) selectedLinuxArchKey = 'amd64';
+else if (isX86Arch) selectedLinuxArchKey = 'i686';
+else if (isArm64Arch) selectedLinuxArchKey = 'arm64';
+else if (isArmhfArch) selectedLinuxArchKey = 'armhf';
+
+const linuxArchFlagNames = [
+  '--x64', '--amd64', '--x86_64',
+  '--x86', '--i686', '--i386',
+  '--arm64', '--aarch64',
+  '--armhf', '--armv7',
+  '--all-arch', '--all-linux-arch'
+];
+
 const isDebug = args.includes('--debug');
 const passthroughArgs = args.filter((arg, i) => {
   if (arg === '--debug') return false;
   if (['--mac', '--mac-universal', '--universal', '--windows', '--win', '--linux', '--linux-deb', '--linux-appimage', '--all'].includes(arg)) return false;
+  if (linuxArchFlagNames.includes(arg)) return false;
   if (arg === '--platform') return false;
   if (i > 0 && args[i - 1] === '--platform') return false;
+  if (arg === '--arch') return false;
+  if (i > 0 && args[i - 1] === '--arch') return false;
+  if (arg === '--target') return false;
+  if (i > 0 && args[i - 1] === '--target') return false;
   return true;
 });
 
@@ -38,10 +89,9 @@ if (!isMac && !isWindows && !isLinux && !isAll) {
   console.error('  • macOS (Universal): npm run desktop:package:mac-universal (or --mac-universal)');
   console.error('  • macOS (Host):      npm run desktop:package:mac           (or --mac)');
   console.error('  • Windows (NSIS):    npm run desktop:package:windows       (or --windows)');
-  console.error('  • Linux (All):       npm run desktop:package:linux         (or --linux)');
-  console.error('  • Linux (.deb):      npm run desktop:package:linux:deb     (or --linux-deb)');
-  console.error('  • Linux (.AppImage): npm run desktop:package:linux:appimage (or --linux-appimage)');
+  console.error('  • Linux (AppImage):  npm run desktop:package:linux         (or --linux)');
   console.error('  • All Available:     npm run desktop:package:all           (or --all)');
+  console.error('  • Linux Options:     --arch <x64|x86|arm64|armhf> | --deb | --all-arch');
   console.error('  • Platform option:   node scripts/build-desktop.mjs --platform <mac|windows|linux|all>');
   console.error('==================================================');
   process.exit(1);
@@ -102,7 +152,12 @@ if (isAll) console.log('   Target Filter: All supported desktop platforms');
 else {
   if (isMac) console.log(`   Target Filter: macOS ${isMacUniversal ? '(Universal Apple Silicon + Intel)' : '(Host Architecture)'}`);
   if (isWindows) console.log('   Target Filter: Windows (NSIS Setup .exe)');
-  if (isLinux) console.log(`   Target Filter: Linux ${isLinuxDeb ? '(.deb only)' : (isLinuxAppImage ? '(.AppImage only)' : '(.deb + .AppImage)')}`);
+  if (isLinux) {
+    const archLabel = isAllLinuxArch
+      ? 'All 4 Architectures (64/32-bit AMD & ARM)'
+      : (selectedLinuxArchKey ? LINUX_ARCH_MAP[selectedLinuxArchKey].label : (explicitTarget || 'Host Architecture'));
+    console.log(`   Target Filter: Linux ${isLinuxDeb ? '(.deb only)' : (isLinuxAppImage ? '(.AppImage only)' : '(.deb + .AppImage)')} - [${archLabel}]`);
+  }
 }
 console.log('==================================================');
 
@@ -357,8 +412,12 @@ if (isWindows || isAll) {
 // 3. Linux Build
 // ----------------------------------------------------
 if (isLinux || (isAll && process.platform === 'linux')) {
+  let bundleTypes = 'appimage';
+  if (isLinuxDeb) bundleTypes = 'deb';
+  if (args.includes('--all-formats') || args.includes('--all-bundles') || (isLinuxDeb && isLinuxAppImage)) bundleTypes = 'deb,appimage';
+
   console.log('\n--------------------------------------------------');
-  console.log(`🐧 Building Linux Package (${isLinuxDeb ? 'DEB only' : (isLinuxAppImage ? 'AppImage only' : 'DEB + AppImage')})`);
+  console.log(`🐧 Building Linux Package (${bundleTypes === 'appimage' ? 'Universal AppImage' : (bundleTypes === 'deb' ? 'DEB only' : 'AppImage + DEB')})`);
   console.log('--------------------------------------------------');
 
   if (process.platform !== 'linux') {
@@ -382,30 +441,91 @@ if (isLinux || (isAll && process.platform === 'linux')) {
       }
     }
 
-    let bundleTypes = 'deb,appimage';
-    if (isLinuxDeb) bundleTypes = 'deb';
-    if (isLinuxAppImage) bundleTypes = 'appimage';
 
-    const tauriArgs = ['tauri', 'build', '--bundles', bundleTypes];
-    if (isDebug) tauriArgs.push('--debug');
-    tauriArgs.push(...passthroughArgs);
 
-    const ok = runTauriBuild(tauriArgs);
-    if (!ok) {
-      console.error('\n❌ Linux build failed.');
-      buildSuccess = false;
+    // Determine target architectures to compile
+    const targetsToBuild = [];
+    if (isAllLinuxArch) {
+      targetsToBuild.push(
+        LINUX_ARCH_MAP['amd64'],
+        LINUX_ARCH_MAP['i686'],
+        LINUX_ARCH_MAP['arm64'],
+        LINUX_ARCH_MAP['armhf']
+      );
+    } else if (selectedLinuxArchKey) {
+      targetsToBuild.push(LINUX_ARCH_MAP[selectedLinuxArchKey]);
+    } else if (explicitTarget) {
+      targetsToBuild.push({ target: explicitTarget, label: explicitTarget });
     } else {
-      const searchDirs = [
-        path.join(REPO_ROOT, 'target', modeDir, 'bundle/deb'),
-        path.join(DESKTOP_DIR, 'src-tauri/target', modeDir, 'bundle/deb'),
-        path.join(REPO_ROOT, 'target', modeDir, 'bundle/appimage'),
-        path.join(DESKTOP_DIR, 'src-tauri/target', modeDir, 'bundle/appimage'),
-      ];
-      const linuxPackages = findArtifacts(searchDirs, (name) => name.toLowerCase().endsWith('.deb') || name.toLowerCase().endsWith('.appimage'));
-      if (linuxPackages.length > 0) {
-        for (const pkg of linuxPackages) {
+      targetsToBuild.push({ target: null, label: `Host Architecture (${process.arch})` });
+    }
+
+    for (const tConfig of targetsToBuild) {
+      console.log(`\n==> Packaging for Linux Architecture: [${tConfig.label}]`);
+
+      // Auto-verify and add rustup target if cross-compiling
+      if (tConfig.target && commandExists('rustup')) {
+        try {
+          const installed = execSync('rustup target list --installed', { encoding: 'utf8' });
+          if (!installed.includes(tConfig.target)) {
+            console.log(`  ℹ️ Adding missing rustup target: ${tConfig.target}...`);
+            execSync(`rustup target add ${tConfig.target}`, { stdio: 'inherit' });
+          }
+        } catch (err) {
+          console.warn(`  ⚠️ Could not verify rustup target ${tConfig.target}: ${err.message}`);
+        }
+      }
+
+      const tauriArgs = ['tauri', 'build', '--bundles', bundleTypes];
+      if (tConfig.target) {
+        tauriArgs.push('--target', tConfig.target);
+      }
+      if (isDebug) tauriArgs.push('--debug');
+      tauriArgs.push(...passthroughArgs);
+
+      const ok = runTauriBuild(tauriArgs);
+      if (!ok) {
+        console.error(`\n❌ Linux build failed for ${tConfig.label}.`);
+        buildSuccess = false;
+      }
+    }
+
+    // Locate all generated Linux packages across host and target bundle paths
+    const searchDirs = [
+      path.join(REPO_ROOT, 'target', modeDir, 'bundle/deb'),
+      path.join(DESKTOP_DIR, 'src-tauri/target', modeDir, 'bundle/deb'),
+      path.join(REPO_ROOT, 'target', modeDir, 'bundle/appimage'),
+      path.join(DESKTOP_DIR, 'src-tauri/target', modeDir, 'bundle/appimage'),
+    ];
+
+    const knownLinuxTriples = [
+      'x86_64-unknown-linux-gnu',
+      'i686-unknown-linux-gnu',
+      'aarch64-unknown-linux-gnu',
+      'armv7-unknown-linux-gnueabihf'
+    ];
+    if (explicitTarget && !knownLinuxTriples.includes(explicitTarget)) {
+      knownLinuxTriples.push(explicitTarget);
+    }
+
+    for (const triple of knownLinuxTriples) {
+      searchDirs.push(
+        path.join(REPO_ROOT, 'target', triple, modeDir, 'bundle/deb'),
+        path.join(DESKTOP_DIR, 'src-tauri/target', triple, modeDir, 'bundle/deb'),
+        path.join(REPO_ROOT, 'target', triple, modeDir, 'bundle/appimage'),
+        path.join(DESKTOP_DIR, 'src-tauri/target', triple, modeDir, 'bundle/appimage')
+      );
+    }
+
+    const linuxPackages = findArtifacts(searchDirs, (name) => name.toLowerCase().endsWith('.deb') || name.toLowerCase().endsWith('.appimage'));
+    if (linuxPackages.length > 0) {
+      const seen = new Set();
+      for (const pkg of linuxPackages) {
+        const base = path.basename(pkg);
+        if (!seen.has(base)) {
           const stats = fs.statSync(pkg);
-          console.log(`  ✓ Linux Package Generated: ${path.basename(pkg)} (${formatBytes(stats.size)})`);
+          console.log(`  ✓ Linux Package Generated: ${base} (${formatBytes(stats.size)})`);
+          seen.add(base);
         }
       }
     }
