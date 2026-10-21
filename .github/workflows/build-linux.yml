@@ -37,7 +37,7 @@ jobs:
       matrix: ${{ steps.matrix.outputs.matrix }}
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Extract Project Version
         id: version
@@ -86,10 +86,10 @@ jobs:
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: 'npm'
@@ -186,7 +186,7 @@ jobs:
         run: node scripts/collect-artifacts.mjs
 
       - name: Upload Architecture Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: docchisel-linux-arch-${{ matrix.arch }}-v${{ needs.init.outputs.version }}
           path: releases/linux/
@@ -199,10 +199,10 @@ jobs:
     if: always() && !cancelled() && needs.init.result == 'success'
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Download all Linux artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           pattern: docchisel-linux-arch-*
           merge-multiple: true
@@ -220,7 +220,7 @@ jobs:
           echo "=================================================="
 
       - name: Upload Unified Linux Artifact (All Architectures)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: docchisel-linux-all-v${{ needs.init.outputs.version }}
           path: releases/
@@ -228,7 +228,7 @@ jobs:
 
       - name: Create Draft GitHub Release
         if: needs.build-linux.result == 'success' && (github.event.inputs.create_draft_release == 'true' || startsWith(github.ref, 'refs/tags/v'))
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ needs.init.outputs.tag_name }}
           name: "DocChisel v${{ needs.init.outputs.version }}"
