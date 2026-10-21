@@ -17,7 +17,6 @@ target/
 **/target/
 **/*.rs.bk
 *.cargo-ok
-Cargo.lock
 
 # --- Compiled Native Bridge Binaries ---
 **/jniLibs/**/*.so
@@ -50,6 +49,10 @@ out/
 **/out/
 releases/
 **/releases/
+*.zip
+*.tar.gz
+*.tgz
+*.7z
 .next/
 *.tsbuildinfo
 **/*.tsbuildinfo
@@ -137,5 +140,7 @@ ehthumbs.db
 **/*.tmp
 temp_test/
 **/temp_test/
+_staging*/
+**/_staging*/
 coverage/
 **/.nyc_output/
