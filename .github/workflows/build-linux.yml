@@ -226,6 +226,71 @@ jobs:
 
           sudo update-binfmts --enable qemu-arm 2>/dev/null || true
 
+          # Install native appimagetool and download armhf runtime stub
+          sudo wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage -O /tmp/appimagetool.AppImage
+          sudo chmod +x /tmp/appimagetool.AppImage
+          cd /tmp && sudo /tmp/appimagetool.AppImage --appimage-extract >/dev/null 2>&1
+          sudo rm -rf /opt/appimagetool && sudo mv /tmp/squashfs-root /opt/appimagetool
+          sudo ln -sf /opt/appimagetool/AppRun /usr/local/bin/appimagetool
+          sudo wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/runtime-armhf -O /opt/appimagetool/runtime-armhf 2>/dev/null || true
+
+          # Pre-configure linuxdeploy-plugin-appimage shim in Tauri cache
+          # This runs native appimagetool and eliminates QEMU user-mode FUSE exit code 2 crashes
+          mkdir -p "$HOME/.cache/tauri"
+          cat <<'SHIM_EOF' > "$HOME/.cache/tauri/linuxdeploy-plugin-appimage.AppImage"
+          #!/bin/bash
+          set -e
+
+          for arg in "$@"; do
+              if [ "$arg" = "--plugin-api-version" ]; then
+                  echo "0"
+                  exit 0
+              fi
+              if [ "$arg" = "--plugin-type" ]; then
+                  echo "output"
+                  exit 0
+              fi
+          done
+
+          APPDIR=""
+          while [ "$#" -gt 0 ]; do
+              case "$1" in
+                  --appdir)
+                      APPDIR="$2"
+                      shift 2
+                      ;;
+                  *)
+                      shift
+                      ;;
+              esac
+          done
+
+          if [ -n "$APPDIR" ]; then
+              echo "==> [DocChisel Shim] Packaging ARMv7 AppImage using native appimagetool..."
+              export ARCH="${ARCH:-armhf}"
+              export APPIMAGE_EXTRACT_AND_RUN=1
+
+              OUT="${OUTPUT:-${APPDIR%/*}/DocChisel_0.1.0_armhf.AppImage}"
+              echo "    AppDir: $APPDIR"
+              echo "    Output: $OUT"
+
+              TOOL="/usr/local/bin/appimagetool"
+              if [ ! -x "$TOOL" ]; then
+                  TOOL="/opt/appimagetool/AppRun"
+              fi
+
+              if [ -f /opt/appimagetool/runtime-armhf ]; then
+                  "$TOOL" --runtime-file /opt/appimagetool/runtime-armhf "$APPDIR" "$OUT"
+              else
+                  "$TOOL" "$APPDIR" "$OUT"
+              fi
+              exit $?
+          fi
+
+          exit 0
+          SHIM_EOF
+          chmod +x "$HOME/.cache/tauri/linuxdeploy-plugin-appimage.AppImage"
+
       - name: Install NPM Dependencies
         run: npm ci
 

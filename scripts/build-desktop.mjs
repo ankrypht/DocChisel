@@ -513,6 +513,69 @@ if (isLinux || (isAll && process.platform === 'linux')) {
         if (!buildEnv.CXX_armv7_unknown_linux_gnueabihf && commandExists('arm-linux-gnueabihf-g++')) {
           buildEnv.CXX_armv7_unknown_linux_gnueabihf = 'arm-linux-gnueabihf-g++';
         }
+
+        // Setup linuxdeploy-plugin-appimage shim for armhf to prevent QEMU user-mode FUSE crashes
+        const tauriCacheDir = path.join(process.env.HOME || process.env.USERPROFILE || '', '.cache', 'tauri');
+        if (commandExists('appimagetool') || fs.existsSync('/usr/local/bin/appimagetool') || fs.existsSync('/opt/appimagetool/AppRun')) {
+          try {
+            fs.mkdirSync(tauriCacheDir, { recursive: true });
+            const shimPath = path.join(tauriCacheDir, 'linuxdeploy-plugin-appimage.AppImage');
+            const shimContent = `#!/bin/bash
+set -e
+for arg in "$@"; do
+    if [ "$arg" = "--plugin-api-version" ]; then
+        echo "0"
+        exit 0
+    fi
+    if [ "$arg" = "--plugin-type" ]; then
+        echo "output"
+        exit 0
+    fi
+done
+
+APPDIR=""
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        --appdir)
+            APPDIR="$2"
+            shift 2
+            ;;
+        *)
+            shift
+            ;;
+    esac
+done
+
+if [ -n "$APPDIR" ]; then
+    echo "==> [DocChisel Shim] Packaging ARMv7 AppImage using native appimagetool..."
+    export ARCH="\${ARCH:-armhf}"
+    export APPIMAGE_EXTRACT_AND_RUN=1
+
+    OUT="\${OUTPUT:-\${APPDIR%/*}/DocChisel_0.1.0_armhf.AppImage}"
+    TOOL="/usr/local/bin/appimagetool"
+    if [ ! -x "$TOOL" ]; then
+        if command -v appimagetool >/dev/null 2>&1; then
+            TOOL="appimagetool"
+        elif [ -x /opt/appimagetool/AppRun ]; then
+            TOOL="/opt/appimagetool/AppRun"
+        fi
+    fi
+
+    if [ -f /opt/appimagetool/runtime-armhf ]; then
+        "$TOOL" --runtime-file /opt/appimagetool/runtime-armhf "$APPDIR" "$OUT"
+    elif [ -n "$TOOL" ]; then
+        "$TOOL" "$APPDIR" "$OUT"
+    fi
+    exit $?
+fi
+exit 0
+`;
+            fs.writeFileSync(shimPath, shimContent, { mode: 0o755 });
+            console.log('  ✓ Installed native appimagetool shim in Tauri tool cache for armhf');
+          } catch (err) {
+            console.warn(`  ⚠️ Could not pre-seed Tauri plugin shim: ${err.message}`);
+          }
+        }
       }
 
       // Auto-verify and add rustup target if cross-compiling
