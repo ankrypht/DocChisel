@@ -34,6 +34,7 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
       tag_name: ${{ steps.version.outputs.tag_name }}
+      matrix: ${{ steps.matrix.outputs.matrix }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -52,35 +53,32 @@ jobs:
           echo "Build version: ${VERSION}"
           echo "Release tag: ${TAG_NAME}"
 
+      - name: Determine Target Matrix
+        id: matrix
+        env:
+          SELECTED_ARCH: ${{ github.event.inputs.architecture }}
+        run: |
+          node -e '
+            const selected = process.env.SELECTED_ARCH || "all";
+            const allTargets = [
+              { arch: "x64", name: "Linux x86_64 (64-bit AMD/Intel)", runner: "ubuntu-22.04", target: "x86_64-unknown-linux-gnu", build_arg: "--x64" },
+              { arch: "arm64", name: "Linux ARM64 (64-bit ARM)", runner: "ubuntu-24.04-arm", target: "aarch64-unknown-linux-gnu", build_arg: "--arm64" },
+              { arch: "x86", name: "Linux i686 (32-bit AMD/Intel)", runner: "ubuntu-22.04", target: "i686-unknown-linux-gnu", build_arg: "--x86" },
+              { arch: "armhf", name: "Linux ARMv7 (32-bit ARM)", runner: "ubuntu-22.04", target: "armv7-unknown-linux-gnueabihf", build_arg: "--armhf" }
+            ];
+            const filtered = (selected === "all" || !selected) ? allTargets : allTargets.filter(t => t.arch === selected);
+            const matrix = { include: filtered };
+            const fs = require("fs");
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, `matrix=${JSON.stringify(matrix)}\n`);
+            console.log("Generated matrix:", JSON.stringify(matrix, null, 2));
+          '
+
   build-linux:
     name: Build ${{ matrix.name }}
     needs: init
-    if: github.event_name != 'workflow_dispatch' || github.event.inputs.architecture == 'all' || github.event.inputs.architecture == matrix.arch
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - arch: x64
-            name: "Linux x86_64 (64-bit AMD/Intel)"
-            runner: ubuntu-22.04
-            target: x86_64-unknown-linux-gnu
-            build_arg: --x64
-          - arch: arm64
-            name: "Linux ARM64 (64-bit ARM)"
-            runner: ubuntu-24.04-arm
-            target: aarch64-unknown-linux-gnu
-            build_arg: --arm64
-          - arch: x86
-            name: "Linux i686 (32-bit AMD/Intel)"
-            runner: ubuntu-22.04
-            target: i686-unknown-linux-gnu
-            build_arg: --x86
-          - arch: armhf
-            name: "Linux ARMv7 (32-bit ARM)"
-            runner: ubuntu-22.04
-            target: armv7-unknown-linux-gnueabihf
-            build_arg: --armhf
-
+      matrix: ${{ fromJson(needs.init.outputs.matrix) }}
     runs-on: ${{ matrix.runner }}
 
     env:
