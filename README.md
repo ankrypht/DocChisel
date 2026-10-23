@@ -25,8 +25,15 @@
 | **Merge PDF** | Organize PDF | Combine multiple PDFs in any custom order with high-speed local processing. |
 | **Split PDF** | Organize PDF | Burst documents into single pages or extract arbitrary page ranges. |
 | **Organize PDF** | Organize PDF | Visual page organizer: rotate (90°, 180°, 270°), reorder, or delete individual pages. |
+| **Compress PDF** | Organize PDF | Downsample high-DPI images and recompress streams locally with zero quality loss. |
+| **Watermark PDF** | Organize PDF | Overlay configurable text or image watermark stamps with opacity, rotation, and positioning. |
+| **Page Numbers** | Organize PDF | Stamp sequential page numbering with flexible format templates and margin controls. |
+| **Protect PDF** | Organize PDF | Secure sensitive PDF files with password protection and strict AES-256 encryption. |
+| **Unlock PDF** | Organize PDF | Decrypt password-protected PDFs to create permanent unencrypted copies. |
+| **Crop PDF** | Organize PDF | Trim page margins by customizing MediaBox and CropBox coordinates with precision. |
 | **Images to PDF** | Convert | Convert JPG, PNG, and WebP collections into standard A4, Letter, or Fit PDFs. |
 | **Image Studio** | Image Studio | Batch compress, resize, and convert between PNG, JPEG, and WebP. |
+| **Watermark Image** | Image Studio | Protect creative visual assets with custom translucent text or brand logo watermarks. |
 
 ---
 
@@ -94,7 +101,7 @@ cd DocChisel
 # Install dependencies across all monorepo workspaces
 npm install
 
-# Run TypeScript checks and verify all 12 Rust core engine tests
+# Run TypeScript checks and verify all Rust core engine integration tests
 npm run check:all
 ```
 

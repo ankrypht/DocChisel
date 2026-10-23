@@ -1,5 +1,12 @@
 pub mod image_studio;
+pub mod image_watermark;
 pub mod images_to_pdf;
+pub mod pdf_compress;
+pub mod pdf_crop;
 pub mod pdf_merge;
 pub mod pdf_organize;
+pub mod pdf_page_numbers;
+pub mod pdf_protect;
 pub mod pdf_split;
+pub mod pdf_unlock;
+pub mod pdf_watermark;

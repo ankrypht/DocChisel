@@ -8,6 +8,12 @@ import {
   LayoutGrid,
   Image as ImageIcon,
   Sparkles,
+  Minimize2,
+  Stamp,
+  Hash,
+  Lock,
+  Unlock,
+  Crop,
 } from 'lucide-react-native';
 
 interface ToolCardProps {
@@ -33,6 +39,20 @@ export function ToolCard({ tool }: ToolCardProps) {
         return <ImageIcon size={size} color={color} />;
       case 'image_studio':
         return <Sparkles size={size} color={color} />;
+      case 'pdf_compress':
+        return <Minimize2 size={size} color={color} />;
+      case 'pdf_watermark':
+        return <Stamp size={size} color={color} />;
+      case 'pdf_page_numbers':
+        return <Hash size={size} color={color} />;
+      case 'pdf_protect':
+        return <Lock size={size} color={color} />;
+      case 'pdf_unlock':
+        return <Unlock size={size} color={color} />;
+      case 'pdf_crop':
+        return <Crop size={size} color={color} />;
+      case 'image_watermark':
+        return <Stamp size={size} color={color} />;
       default:
         return <Files size={size} color={color} />;
     }

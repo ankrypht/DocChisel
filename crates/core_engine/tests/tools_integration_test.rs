@@ -372,3 +372,242 @@ fn test_uri_file_scheme_handling() {
     assert!(out_dir.join("uri_merged.pdf").exists());
 }
 
+#[test]
+fn test_pdf_compress() {
+    let temp_dir = TempDir::new().unwrap();
+    let img_path = temp_dir.path().join("photo.jpg");
+    create_test_image(&img_path, 200, 200, image::ImageFormat::Jpeg);
+
+    let pdf_path = temp_dir.path().join("doc_with_images.pdf");
+    let out_dir = temp_dir.path().join("out_pdf_compress");
+
+    // Create a PDF with an image via images_to_pdf
+    let make_pdf_payload = serde_json::json!({
+        "action": "images_to_pdf",
+        "params": {
+            "input_paths": [img_path.to_str().unwrap()],
+            "output_dir": temp_dir.path().to_str().unwrap(),
+            "output_filename": "doc_with_images.pdf",
+            "page_size": "a4",
+            "orientation": "portrait",
+            "margin_mm": 10.0
+        }
+    });
+    let make_resp: Value = serde_json::from_str(&execute_job(&make_pdf_payload.to_string())).unwrap();
+    assert_eq!(make_resp["success"], true);
+
+    // Compress the generated PDF
+    let compress_payload = serde_json::json!({
+        "action": "pdf_compress",
+        "params": {
+            "input_path": pdf_path.to_str().unwrap(),
+            "output_dir": out_dir.to_str().unwrap(),
+            "output_filename": "compressed.pdf",
+            "level": "recommended"
+        }
+    });
+
+    let resp: Value = serde_json::from_str(&execute_job(&compress_payload.to_string())).unwrap();
+    assert_eq!(resp["success"], true, "Compress failed: {:?}", resp);
+    assert!(out_dir.join("compressed.pdf").exists());
+    assert_eq!(resp["output"]["tool"], "pdf_compress");
+}
+
+#[test]
+fn test_pdf_watermark_text_and_image() {
+    let temp_dir = TempDir::new().unwrap();
+    let pdf_path = temp_dir.path().join("original.pdf");
+    create_test_pdf(&pdf_path, 3);
+
+    let logo_path = temp_dir.path().join("watermark_logo.png");
+    create_test_image(&logo_path, 60, 60, image::ImageFormat::Png);
+
+    let out_dir = temp_dir.path().join("out_watermark");
+
+    // 1. Text Watermark
+    let text_payload = serde_json::json!({
+        "action": "pdf_watermark",
+        "params": {
+            "input_path": pdf_path.to_str().unwrap(),
+            "output_dir": out_dir.to_str().unwrap(),
+            "output_filename": "text_watermarked.pdf",
+            "watermark_type": "text",
+            "text": "DRAFT COPY",
+            "font_size": 36.0,
+            "color": "#FF0000",
+            "opacity": 0.4,
+            "rotation": 45.0,
+            "position": "center",
+            "pages": "1-2"
+        }
+    });
+    let resp1: Value = serde_json::from_str(&execute_job(&text_payload.to_string())).unwrap();
+    assert_eq!(resp1["success"], true, "Text watermark failed: {:?}", resp1);
+    assert!(out_dir.join("text_watermarked.pdf").exists());
+
+    // 2. Image Watermark
+    let img_payload = serde_json::json!({
+        "action": "pdf_watermark",
+        "params": {
+            "input_path": pdf_path.to_str().unwrap(),
+            "output_dir": out_dir.to_str().unwrap(),
+            "output_filename": "image_watermarked.pdf",
+            "watermark_type": "image",
+            "image_path": logo_path.to_str().unwrap(),
+            "image_scale": 0.3,
+            "opacity": 0.5,
+            "rotation": 0.0,
+            "position": "bottom_right",
+            "pages": "all"
+        }
+    });
+    let resp2: Value = serde_json::from_str(&execute_job(&img_payload.to_string())).unwrap();
+    assert_eq!(resp2["success"], true, "Image watermark failed: {:?}", resp2);
+    assert!(out_dir.join("image_watermarked.pdf").exists());
+}
+
+#[test]
+fn test_pdf_page_numbers() {
+    let temp_dir = TempDir::new().unwrap();
+    let pdf_path = temp_dir.path().join("source.pdf");
+    create_test_pdf(&pdf_path, 4);
+
+    let out_dir = temp_dir.path().join("out_page_numbers");
+
+    let payload = serde_json::json!({
+        "action": "pdf_page_numbers",
+        "params": {
+            "input_path": pdf_path.to_str().unwrap(),
+            "output_dir": out_dir.to_str().unwrap(),
+            "output_filename": "numbered.pdf",
+            "format_template": "Page {n} / {total}",
+            "position": "bottom_center",
+            "margin_pt": 30.0,
+            "font_size": 12.0,
+            "start_page_number": 1,
+            "pages": "all"
+        }
+    });
+
+    let resp: Value = serde_json::from_str(&execute_job(&payload.to_string())).unwrap();
+    assert_eq!(resp["success"], true, "Page numbers failed: {:?}", resp);
+    assert!(out_dir.join("numbered.pdf").exists());
+}
+
+#[test]
+fn test_pdf_protect_and_unlock() {
+    let temp_dir = TempDir::new().unwrap();
+    let pdf_path = temp_dir.path().join("clear.pdf");
+    create_test_pdf(&pdf_path, 2);
+
+    let out_dir = temp_dir.path().join("out_crypto");
+
+    // 1. Protect PDF with password
+    let protect_payload = serde_json::json!({
+        "action": "pdf_protect",
+        "params": {
+            "input_path": pdf_path.to_str().unwrap(),
+            "output_dir": out_dir.to_str().unwrap(),
+            "output_filename": "locked.pdf",
+            "user_password": "DocChiselPassword123"
+        }
+    });
+    let prot_resp: Value = serde_json::from_str(&execute_job(&protect_payload.to_string())).unwrap();
+    assert_eq!(prot_resp["success"], true, "Protect failed: {:?}", prot_resp);
+    let locked_path = out_dir.join("locked.pdf");
+    assert!(locked_path.exists());
+
+    // Verify it is indeed encrypted
+    let doc_check = lopdf::Document::load(&locked_path);
+    assert!(doc_check.is_err() || doc_check.unwrap().is_encrypted());
+
+    // 2. Unlock PDF with wrong password should fail gracefully
+    let wrong_unlock_payload = serde_json::json!({
+        "action": "pdf_unlock",
+        "params": {
+            "input_path": locked_path.to_str().unwrap(),
+            "output_dir": out_dir.to_str().unwrap(),
+            "output_filename": "wrong.pdf",
+            "password": "wrong_password"
+        }
+    });
+    let wrong_resp: Value = serde_json::from_str(&execute_job(&wrong_unlock_payload.to_string())).unwrap();
+    assert_eq!(wrong_resp["success"], false);
+
+    // 3. Unlock PDF with correct password
+    let unlock_payload = serde_json::json!({
+        "action": "pdf_unlock",
+        "params": {
+            "input_path": locked_path.to_str().unwrap(),
+            "output_dir": out_dir.to_str().unwrap(),
+            "output_filename": "unlocked.pdf",
+            "password": "DocChiselPassword123"
+        }
+    });
+    let unl_resp: Value = serde_json::from_str(&execute_job(&unlock_payload.to_string())).unwrap();
+    assert_eq!(unl_resp["success"], true, "Unlock failed: {:?}", unl_resp);
+    let unlocked_path = out_dir.join("unlocked.pdf");
+    assert!(unlocked_path.exists());
+
+    // Verify unlocked document can be read without password
+    let reloaded = lopdf::Document::load(&unlocked_path);
+    assert!(reloaded.is_ok(), "Unlocked doc must be loadable without credentials");
+    assert!(!reloaded.unwrap().is_encrypted(), "Unlocked doc must not be marked encrypted");
+}
+
+#[test]
+fn test_pdf_crop() {
+    let temp_dir = TempDir::new().unwrap();
+    let pdf_path = temp_dir.path().join("before_crop.pdf");
+    create_test_pdf(&pdf_path, 2);
+
+    let out_dir = temp_dir.path().join("out_crop");
+
+    let payload = serde_json::json!({
+        "action": "pdf_crop",
+        "params": {
+            "input_path": pdf_path.to_str().unwrap(),
+            "output_dir": out_dir.to_str().unwrap(),
+            "output_filename": "cropped.pdf",
+            "margin_top": 20.0,
+            "margin_bottom": 20.0,
+            "margin_left": 15.0,
+            "margin_right": 15.0,
+            "unit": "pt"
+        }
+    });
+
+    let resp: Value = serde_json::from_str(&execute_job(&payload.to_string())).unwrap();
+    assert_eq!(resp["success"], true, "Crop failed: {:?}", resp);
+    assert!(out_dir.join("cropped.pdf").exists());
+}
+
+#[test]
+fn test_image_watermark() {
+    let temp_dir = TempDir::new().unwrap();
+    let img_path = temp_dir.path().join("base_photo.jpg");
+    create_test_image(&img_path, 300, 200, image::ImageFormat::Jpeg);
+
+    let out_dir = temp_dir.path().join("out_img_watermark");
+
+    let payload = serde_json::json!({
+        "action": "image_watermark",
+        "params": {
+            "input_paths": [img_path.to_str().unwrap()],
+            "output_dir": out_dir.to_str().unwrap(),
+            "watermark_type": "text",
+            "text": "DocChisel Stamp",
+            "font_size": 24.0,
+            "color": "#FFFFFF",
+            "opacity": 0.6,
+            "position": "bottom_right",
+            "margin": 15
+        }
+    });
+
+    let resp: Value = serde_json::from_str(&execute_job(&payload.to_string())).unwrap();
+    assert_eq!(resp["success"], true, "Image watermark failed: {:?}", resp);
+    assert_eq!(resp["output"]["files"].as_array().unwrap().len(), 1);
+}
+
+

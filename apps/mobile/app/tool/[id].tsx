@@ -20,6 +20,12 @@ import {
   ImageResizeMode,
   PageRotation,
   PdfSplitMode,
+  PdfCompressLevel,
+  PdfWatermarkType,
+  PdfWatermarkPosition,
+  PdfPageNumbersPosition,
+  PdfCropUnit,
+  ImageWatermarkPosition,
   JobOutput,
   TOOL_THEMES,
 } from '@docchisel/shared';
@@ -39,6 +45,13 @@ import { PdfSplitPanel } from '../../components/panels/PdfSplitPanel';
 import { PdfOrganizePanel } from '../../components/panels/PdfOrganizePanel';
 import { ImagesToPdfPanel } from '../../components/panels/ImagesToPdfPanel';
 import { ImageStudioPanel } from '../../components/panels/ImageStudioPanel';
+import { PdfCompressPanel } from '../../components/panels/PdfCompressPanel';
+import { PdfWatermarkPanel } from '../../components/panels/PdfWatermarkPanel';
+import { PdfPageNumbersPanel } from '../../components/panels/PdfPageNumbersPanel';
+import { PdfProtectPanel } from '../../components/panels/PdfProtectPanel';
+import { PdfUnlockPanel } from '../../components/panels/PdfUnlockPanel';
+import { PdfCropPanel } from '../../components/panels/PdfCropPanel';
+import { ImageWatermarkPanel } from '../../components/panels/ImageWatermarkPanel';
 import { ArrowLeft, Play, AlertCircle, Folder, Sparkles } from 'lucide-react-native';
 
 export default function ToolWorkspaceScreen() {
@@ -89,6 +102,57 @@ export default function ToolWorkspaceScreen() {
   const [imageStudioHeight, setImageStudioHeight] = useState(1080);
   const [imageStudioScale, setImageStudioScale] = useState(75);
   const [imageStudioAspectRatio, setImageStudioAspectRatio] = useState(true);
+
+  // 6. pdf_compress
+  const [compressLevel, setCompressLevel] = useState<PdfCompressLevel>('recommended');
+  const [compressFilename, setCompressFilename] = useState('');
+
+  // 7. pdf_watermark
+  const [pdfWatermarkType, setPdfWatermarkType] = useState<PdfWatermarkType>('text');
+  const [pdfWatermarkText, setPdfWatermarkText] = useState('CONFIDENTIAL');
+  const [pdfWatermarkFontSize, setPdfWatermarkFontSize] = useState(48);
+  const [pdfWatermarkColor, setPdfWatermarkColor] = useState('#FF0000');
+  const [pdfWatermarkImagePath, setPdfWatermarkImagePath] = useState('');
+  const [pdfWatermarkOpacity, setPdfWatermarkOpacity] = useState(0.3);
+  const [pdfWatermarkRotation, setPdfWatermarkRotation] = useState(45);
+  const [pdfWatermarkPosition, setPdfWatermarkPosition] = useState<PdfWatermarkPosition>('center');
+  const [pdfWatermarkPages, setPdfWatermarkPages] = useState('all');
+  const [pdfWatermarkFilename, setPdfWatermarkFilename] = useState('');
+
+  // 8. pdf_page_numbers
+  const [pageNumbersFormat, setPageNumbersFormat] = useState('Page {n} of {total}');
+  const [pageNumbersPosition, setPageNumbersPosition] = useState<PdfPageNumbersPosition>('bottom_center');
+  const [pageNumbersFontSize, setPageNumbersFontSize] = useState(10);
+  const [pageNumbersMarginPt, setPageNumbersMarginPt] = useState(30);
+  const [pageNumbersStart, setPageNumbersStart] = useState(1);
+  const [pageNumbersPages, setPageNumbersPages] = useState('all');
+  const [pageNumbersFilename, setPageNumbersFilename] = useState('');
+
+  // 9. pdf_protect
+  const [protectUserPassword, setProtectUserPassword] = useState('');
+  const [protectFilename, setProtectFilename] = useState('');
+
+  // 10. pdf_unlock
+  const [unlockPassword, setUnlockPassword] = useState('');
+  const [unlockFilename, setUnlockFilename] = useState('');
+
+  // 11. pdf_crop
+  const [cropMarginTop, setCropMarginTop] = useState(20);
+  const [cropMarginBottom, setCropMarginBottom] = useState(20);
+  const [cropMarginLeft, setCropMarginLeft] = useState(20);
+  const [cropMarginRight, setCropMarginRight] = useState(20);
+  const [cropUnit, setCropUnit] = useState<PdfCropUnit>('pt');
+  const [cropFilename, setCropFilename] = useState('');
+
+  // 12. image_watermark
+  const [imageWatermarkType, setImageWatermarkType] = useState<PdfWatermarkType>('text');
+  const [imageWatermarkText, setImageWatermarkText] = useState('© DocChisel');
+  const [imageWatermarkFontSize, setImageWatermarkFontSize] = useState(36);
+  const [imageWatermarkColor, setImageWatermarkColor] = useState('#FFFFFF');
+  const [imageWatermarkImagePath, setImageWatermarkImagePath] = useState('');
+  const [imageWatermarkOpacity, setImageWatermarkOpacity] = useState(0.5);
+  const [imageWatermarkPosition, setImageWatermarkPosition] = useState<ImageWatermarkPosition>('bottom_right');
+  const [imageWatermarkMargin, setImageWatermarkMargin] = useState(20);
 
   // Execution State
   const scrollRef = useRef<React.ElementRef<typeof ScrollView>>(null);
@@ -279,6 +343,117 @@ export default function ToolWorkspaceScreen() {
             },
           };
           break;
+        case 'pdf_compress':
+          request = {
+            action: 'pdf_compress',
+            params: {
+              input_path: stagedFiles[0],
+              output_dir: appOutputDir,
+              output_filename: compressFilename || undefined,
+              level: compressLevel,
+            },
+          };
+          break;
+        case 'pdf_watermark':
+          request = {
+            action: 'pdf_watermark',
+            params: {
+              input_path: stagedFiles[0],
+              output_dir: appOutputDir,
+              output_filename: pdfWatermarkFilename || undefined,
+              watermark_type: pdfWatermarkType,
+              text: pdfWatermarkType === 'text' ? pdfWatermarkText : undefined,
+              font_size: pdfWatermarkType === 'text' ? pdfWatermarkFontSize : undefined,
+              color: pdfWatermarkType === 'text' ? pdfWatermarkColor : undefined,
+              image_path: pdfWatermarkType === 'image' ? pdfWatermarkImagePath : undefined,
+              opacity: pdfWatermarkOpacity,
+              rotation: pdfWatermarkRotation,
+              position: pdfWatermarkPosition,
+              pages: pdfWatermarkPages || undefined,
+            },
+          };
+          break;
+        case 'pdf_page_numbers':
+          request = {
+            action: 'pdf_page_numbers',
+            params: {
+              input_path: stagedFiles[0],
+              output_dir: appOutputDir,
+              output_filename: pageNumbersFilename || undefined,
+              format_template: pageNumbersFormat,
+              position: pageNumbersPosition,
+              font_size: pageNumbersFontSize,
+              margin_pt: pageNumbersMarginPt,
+              start_page_number: pageNumbersStart,
+              pages: pageNumbersPages || undefined,
+            },
+          };
+          break;
+        case 'pdf_protect':
+          if (!protectUserPassword) {
+            setErrorMessage('Please enter a password to protect the document.');
+            setIsProcessing(false);
+            return;
+          }
+          request = {
+            action: 'pdf_protect',
+            params: {
+              input_path: stagedFiles[0],
+              output_dir: appOutputDir,
+              output_filename: protectFilename || undefined,
+              user_password: protectUserPassword,
+            },
+          };
+          break;
+        case 'pdf_unlock':
+          if (!unlockPassword) {
+            setErrorMessage('Please enter the password to unlock the document.');
+            setIsProcessing(false);
+            return;
+          }
+          request = {
+            action: 'pdf_unlock',
+            params: {
+              input_path: stagedFiles[0],
+              output_dir: appOutputDir,
+              output_filename: unlockFilename || undefined,
+              password: unlockPassword,
+            },
+          };
+          break;
+        case 'pdf_crop':
+          request = {
+            action: 'pdf_crop',
+            params: {
+              input_path: stagedFiles[0],
+              output_dir: appOutputDir,
+              output_filename: cropFilename || undefined,
+              margin_top: cropMarginTop,
+              margin_bottom: cropMarginBottom,
+              margin_left: cropMarginLeft,
+              margin_right: cropMarginRight,
+              unit: cropUnit,
+            },
+          };
+          break;
+        case 'image_watermark':
+          request = {
+            action: 'image_watermark',
+            params: {
+              input_paths: stagedFiles,
+              output_dir: appOutputDir,
+              watermark_type: imageWatermarkType,
+              text: imageWatermarkType === 'text' ? imageWatermarkText : undefined,
+              font_size: imageWatermarkType === 'text' ? imageWatermarkFontSize : undefined,
+              color: imageWatermarkType === 'text' ? imageWatermarkColor : undefined,
+              watermark_image_path:
+                imageWatermarkType === 'image' ? imageWatermarkImagePath : undefined,
+              opacity: imageWatermarkOpacity,
+              position: imageWatermarkPosition,
+              margin: imageWatermarkMargin,
+            },
+          };
+          break;
       }
 
       const response = await executeJobMobile(request);
@@ -290,6 +465,18 @@ export default function ToolWorkspaceScreen() {
           setMergeOutputFilename((prev) => incrementFilename(prev || 'merged_document.pdf'));
         } else if (tool.id === 'images_to_pdf') {
           setImagesToPdfFilename((prev) => incrementFilename(prev || 'images_document.pdf'));
+        } else if (tool.id === 'pdf_compress' && compressFilename) {
+          setCompressFilename((prev) => incrementFilename(prev));
+        } else if (tool.id === 'pdf_watermark' && pdfWatermarkFilename) {
+          setPdfWatermarkFilename((prev) => incrementFilename(prev));
+        } else if (tool.id === 'pdf_page_numbers' && pageNumbersFilename) {
+          setPageNumbersFilename((prev) => incrementFilename(prev));
+        } else if (tool.id === 'pdf_protect' && protectFilename) {
+          setProtectFilename((prev) => incrementFilename(prev));
+        } else if (tool.id === 'pdf_unlock' && unlockFilename) {
+          setUnlockFilename((prev) => incrementFilename(prev));
+        } else if (tool.id === 'pdf_crop' && cropFilename) {
+          setCropFilename((prev) => incrementFilename(prev));
         }
       } else {
         setErrorMessage(response.error?.message || 'Processing failed');
@@ -472,6 +659,115 @@ export default function ToolWorkspaceScreen() {
                     onChangeScalePercentage={setImageStudioScale}
                     maintainAspectRatio={imageStudioAspectRatio}
                     onChangeMaintainAspectRatio={setImageStudioAspectRatio}
+                  />
+                )}
+
+                {tool.id === 'pdf_compress' && (
+                  <PdfCompressPanel
+                    level={compressLevel}
+                    onChangeLevel={setCompressLevel}
+                    outputFilename={compressFilename}
+                    onChangeOutputFilename={setCompressFilename}
+                  />
+                )}
+
+                {tool.id === 'pdf_watermark' && (
+                  <PdfWatermarkPanel
+                    watermarkType={pdfWatermarkType}
+                    onChangeWatermarkType={setPdfWatermarkType}
+                    text={pdfWatermarkText}
+                    onChangeText={setPdfWatermarkText}
+                    fontSize={pdfWatermarkFontSize}
+                    onChangeFontSize={setPdfWatermarkFontSize}
+                    color={pdfWatermarkColor}
+                    onChangeColor={setPdfWatermarkColor}
+                    imagePath={pdfWatermarkImagePath}
+                    onChangeImagePath={setPdfWatermarkImagePath}
+                    opacity={pdfWatermarkOpacity}
+                    onChangeOpacity={setPdfWatermarkOpacity}
+                    rotation={pdfWatermarkRotation}
+                    onChangeRotation={setPdfWatermarkRotation}
+                    position={pdfWatermarkPosition}
+                    onChangePosition={setPdfWatermarkPosition}
+                    pages={pdfWatermarkPages}
+                    onChangePages={setPdfWatermarkPages}
+                    outputFilename={pdfWatermarkFilename}
+                    onChangeOutputFilename={setPdfWatermarkFilename}
+                  />
+                )}
+
+                {tool.id === 'pdf_page_numbers' && (
+                  <PdfPageNumbersPanel
+                    formatTemplate={pageNumbersFormat}
+                    onChangeFormatTemplate={setPageNumbersFormat}
+                    position={pageNumbersPosition}
+                    onChangePosition={setPageNumbersPosition}
+                    fontSize={pageNumbersFontSize}
+                    onChangeFontSize={setPageNumbersFontSize}
+                    marginPt={pageNumbersMarginPt}
+                    onChangeMarginPt={setPageNumbersMarginPt}
+                    startPageNumber={pageNumbersStart}
+                    onChangeStartPageNumber={setPageNumbersStart}
+                    pages={pageNumbersPages}
+                    onChangePages={setPageNumbersPages}
+                    outputFilename={pageNumbersFilename}
+                    onChangeOutputFilename={setPageNumbersFilename}
+                  />
+                )}
+
+                {tool.id === 'pdf_protect' && (
+                  <PdfProtectPanel
+                    userPassword={protectUserPassword}
+                    onChangeUserPassword={setProtectUserPassword}
+                    outputFilename={protectFilename}
+                    onChangeOutputFilename={setProtectFilename}
+                  />
+                )}
+
+                {tool.id === 'pdf_unlock' && (
+                  <PdfUnlockPanel
+                    password={unlockPassword}
+                    onChangePassword={setUnlockPassword}
+                    outputFilename={unlockFilename}
+                    onChangeOutputFilename={setUnlockFilename}
+                  />
+                )}
+
+                {tool.id === 'pdf_crop' && (
+                  <PdfCropPanel
+                    marginTop={cropMarginTop}
+                    onChangeMarginTop={setCropMarginTop}
+                    marginBottom={cropMarginBottom}
+                    onChangeMarginBottom={setCropMarginBottom}
+                    marginLeft={cropMarginLeft}
+                    onChangeMarginLeft={setCropMarginLeft}
+                    marginRight={cropMarginRight}
+                    onChangeMarginRight={setCropMarginRight}
+                    unit={cropUnit}
+                    onChangeUnit={setCropUnit}
+                    outputFilename={cropFilename}
+                    onChangeOutputFilename={setCropFilename}
+                  />
+                )}
+
+                {tool.id === 'image_watermark' && (
+                  <ImageWatermarkPanel
+                    watermarkType={imageWatermarkType}
+                    onChangeWatermarkType={setImageWatermarkType}
+                    text={imageWatermarkText}
+                    onChangeText={setImageWatermarkText}
+                    fontSize={imageWatermarkFontSize}
+                    onChangeFontSize={setImageWatermarkFontSize}
+                    color={imageWatermarkColor}
+                    onChangeColor={setImageWatermarkColor}
+                    watermarkImagePath={imageWatermarkImagePath}
+                    onChangeWatermarkImagePath={setImageWatermarkImagePath}
+                    opacity={imageWatermarkOpacity}
+                    onChangeOpacity={setImageWatermarkOpacity}
+                    position={imageWatermarkPosition}
+                    onChangePosition={setImageWatermarkPosition}
+                    margin={imageWatermarkMargin}
+                    onChangeMargin={setImageWatermarkMargin}
                   />
                 )}
 

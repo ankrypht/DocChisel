@@ -75,6 +75,15 @@ export async function loadSampleFilesForTool(toolId: ToolId): Promise<string[]> 
     case "image_studio":
       // Image studio optimizes 2 images
       return samples.images;
+    case "image_watermark":
+      return [samples.images[0]];
+    case "pdf_compress":
+    case "pdf_watermark":
+    case "pdf_page_numbers":
+    case "pdf_protect":
+    case "pdf_unlock":
+    case "pdf_crop":
+      return [samples.pdfs[0]];
     default:
       return samples.pdfs;
   }

@@ -49,6 +49,9 @@ export default {
         violet: '#A855F7',
         rose: '#F43F5E',
         amber: '#F59E0B',
+        teal: '#14B8A6',
+        orange: '#F97316',
+        yellow: '#EAB308',
 
         // Brand Aliases (maps all components seamlessly)
         brand: {
@@ -60,6 +63,9 @@ export default {
           violet: '#A855F7',
           rose: '#F43F5E',
           amber: '#F59E0B',
+          teal: '#14B8A6',
+          orange: '#F97316',
+          yellow: '#EAB308',
         },
 
         // Map general gray to zinc for full UI harmony

@@ -11,6 +11,12 @@ import {
   PageRotation,
   PdfSplitMode,
   FilterCategory,
+  PdfCompressLevel,
+  PdfWatermarkType,
+  PdfWatermarkPosition,
+  PdfPageNumbersPosition,
+  PdfCropUnit,
+  ImageWatermarkPosition,
 } from '@docchisel/shared';
 import { Header } from './components/Header';
 import { ToolGrid } from './components/ToolGrid';
@@ -18,8 +24,15 @@ import { DropZone } from './components/DropZone';
 import { PdfMergePanel } from './components/panels/PdfMergePanel';
 import { PdfSplitPanel } from './components/panels/PdfSplitPanel';
 import { PdfOrganizePanel } from './components/panels/PdfOrganizePanel';
+import { PdfCompressPanel } from './components/panels/PdfCompressPanel';
+import { PdfWatermarkPanel } from './components/panels/PdfWatermarkPanel';
+import { PdfPageNumbersPanel } from './components/panels/PdfPageNumbersPanel';
+import { PdfProtectPanel } from './components/panels/PdfProtectPanel';
+import { PdfUnlockPanel } from './components/panels/PdfUnlockPanel';
+import { PdfCropPanel } from './components/panels/PdfCropPanel';
 import { ImagesToPdfPanel } from './components/panels/ImagesToPdfPanel';
 import { ImageStudioPanel } from './components/panels/ImageStudioPanel';
+import { ImageWatermarkPanel } from './components/panels/ImageWatermarkPanel';
 import { ResultView } from './components/ResultView';
 import {
   executeJobBridge,
@@ -77,13 +90,54 @@ export const App: React.FC = () => {
     deletedPages: [],
   });
 
-  // 4. images_to_pdf
+  // 4. pdf_compress
+  const [compressLevel, setCompressLevel] = useState<PdfCompressLevel>('recommended');
+  const [compressFilename, setCompressFilename] = useState('compressed_document.pdf');
+
+  // 5. pdf_watermark
+  const [watermarkType, setWatermarkType] = useState<PdfWatermarkType>('text');
+  const [watermarkText, setWatermarkText] = useState('CONFIDENTIAL');
+  const [watermarkFontSize, setWatermarkFontSize] = useState(48);
+  const [watermarkColor, setWatermarkColor] = useState('#555555');
+  const [watermarkImagePath, setWatermarkImagePath] = useState('');
+  const [watermarkOpacity, setWatermarkOpacity] = useState(0.35);
+  const [watermarkRotation, setWatermarkRotation] = useState(45);
+  const [watermarkPosition, setWatermarkPosition] = useState<PdfWatermarkPosition>('center');
+  const [watermarkPages, setWatermarkPages] = useState('all');
+  const [watermarkFilename, setWatermarkFilename] = useState('watermarked_document.pdf');
+
+  // 6. pdf_page_numbers
+  const [pageNumbersTemplate, setPageNumbersTemplate] = useState('Page {n} of {total}');
+  const [pageNumbersPosition, setPageNumbersPosition] = useState<PdfPageNumbersPosition>('bottom_center');
+  const [pageNumbersFontSize, setPageNumbersFontSize] = useState(10);
+  const [pageNumbersMargin, setPageNumbersMargin] = useState(36);
+  const [pageNumbersStart, setPageNumbersStart] = useState(1);
+  const [pageNumbersPages, setPageNumbersPages] = useState('all');
+  const [pageNumbersFilename, setPageNumbersFilename] = useState('numbered_document.pdf');
+
+  // 7. pdf_protect
+  const [protectPassword, setProtectPassword] = useState('');
+  const [protectFilename, setProtectFilename] = useState('protected_document.pdf');
+
+  // 8. pdf_unlock
+  const [unlockPassword, setUnlockPassword] = useState('');
+  const [unlockFilename, setUnlockFilename] = useState('unlocked_document.pdf');
+
+  // 9. pdf_crop
+  const [cropMarginTop, setCropMarginTop] = useState(25);
+  const [cropMarginBottom, setCropMarginBottom] = useState(25);
+  const [cropMarginLeft, setCropMarginLeft] = useState(25);
+  const [cropMarginRight, setCropMarginRight] = useState(25);
+  const [cropUnit, setCropUnit] = useState<PdfCropUnit>('pt');
+  const [cropFilename, setCropFilename] = useState('cropped_document.pdf');
+
+  // 10. images_to_pdf
   const [imagesToPdfSize, setImagesToPdfSize] = useState<PageSize>('a4');
   const [imagesToPdfOrientation, setImagesToPdfOrientation] = useState<PageOrientation>('auto');
   const [imagesToPdfMargin, setImagesToPdfMargin] = useState(10);
   const [imagesToPdfFilename, setImagesToPdfFilename] = useState('images_document.pdf');
 
-  // 5. image_studio
+  // 11. image_studio
   const [imageStudioFormat, setImageStudioFormat] = useState<ImageTargetFormat>('webp');
   const [imageStudioQuality, setImageStudioQuality] = useState(80);
   const [imageStudioResizeMode, setImageStudioResizeMode] = useState<ImageResizeMode>('none');
@@ -91,6 +145,16 @@ export const App: React.FC = () => {
   const [imageStudioHeight, setImageStudioHeight] = useState(1080);
   const [imageStudioScale, setImageStudioScale] = useState(75);
   const [imageStudioAspectRatio, setImageStudioAspectRatio] = useState(true);
+
+  // 12. image_watermark
+  const [imageWatermarkType, setImageWatermarkType] = useState<PdfWatermarkType>('text');
+  const [imageWatermarkText, setImageWatermarkText] = useState('© DocChisel');
+  const [imageWatermarkFontSize, setImageWatermarkFontSize] = useState(32);
+  const [imageWatermarkColor, setImageWatermarkColor] = useState('#FFFFFF');
+  const [imageWatermarkPath, setImageWatermarkPath] = useState('');
+  const [imageWatermarkOpacity, setImageWatermarkOpacity] = useState(0.5);
+  const [imageWatermarkPosition, setImageWatermarkPosition] = useState<ImageWatermarkPosition>('bottom_right');
+  const [imageWatermarkMargin, setImageWatermarkMargin] = useState(20);
 
   // Execution State
   const [isProcessing, setIsProcessing] = useState(false);
@@ -174,6 +238,99 @@ export const App: React.FC = () => {
           },
         };
         break;
+      case 'pdf_compress':
+        request = {
+          action: 'pdf_compress',
+          params: {
+            input_path: stagedFiles[0],
+            output_dir: outputDir,
+            level: compressLevel,
+            output_filename: compressFilename || undefined,
+          },
+        };
+        break;
+      case 'pdf_watermark':
+        request = {
+          action: 'pdf_watermark',
+          params: {
+            input_path: stagedFiles[0],
+            output_dir: outputDir,
+            watermark_type: watermarkType,
+            text: watermarkType === 'text' ? watermarkText : undefined,
+            font_size: watermarkType === 'text' ? watermarkFontSize : undefined,
+            color: watermarkType === 'text' ? watermarkColor : undefined,
+            image_path: watermarkType === 'image' ? watermarkImagePath : undefined,
+            opacity: watermarkOpacity,
+            rotation: watermarkRotation,
+            position: watermarkPosition,
+            pages: watermarkPages || undefined,
+            output_filename: watermarkFilename || undefined,
+          },
+        };
+        break;
+      case 'pdf_page_numbers':
+        request = {
+          action: 'pdf_page_numbers',
+          params: {
+            input_path: stagedFiles[0],
+            output_dir: outputDir,
+            format_template: pageNumbersTemplate,
+            position: pageNumbersPosition,
+            font_size: pageNumbersFontSize,
+            margin_pt: pageNumbersMargin,
+            start_page_number: pageNumbersStart,
+            pages: pageNumbersPages || undefined,
+            output_filename: pageNumbersFilename || undefined,
+          },
+        };
+        break;
+      case 'pdf_protect':
+        if (!protectPassword.trim()) {
+          setIsProcessing(false);
+          setErrorMessage('Please enter a password to protect the document.');
+          return;
+        }
+        request = {
+          action: 'pdf_protect',
+          params: {
+            input_path: stagedFiles[0],
+            output_dir: outputDir,
+            user_password: protectPassword,
+            output_filename: protectFilename || undefined,
+          },
+        };
+        break;
+      case 'pdf_unlock':
+        if (!unlockPassword.trim()) {
+          setIsProcessing(false);
+          setErrorMessage('Please enter the document password to unlock.');
+          return;
+        }
+        request = {
+          action: 'pdf_unlock',
+          params: {
+            input_path: stagedFiles[0],
+            output_dir: outputDir,
+            password: unlockPassword,
+            output_filename: unlockFilename || undefined,
+          },
+        };
+        break;
+      case 'pdf_crop':
+        request = {
+          action: 'pdf_crop',
+          params: {
+            input_path: stagedFiles[0],
+            output_dir: outputDir,
+            margin_top: cropMarginTop,
+            margin_bottom: cropMarginBottom,
+            margin_left: cropMarginLeft,
+            margin_right: cropMarginRight,
+            unit: cropUnit,
+            output_filename: cropFilename || undefined,
+          },
+        };
+        break;
       case 'images_to_pdf':
         request = {
           action: 'images_to_pdf',
@@ -200,6 +357,23 @@ export const App: React.FC = () => {
             target_height: imageStudioResizeMode === 'dimensions' ? imageStudioHeight : undefined,
             scale_percentage: imageStudioResizeMode === 'percentage' ? imageStudioScale : undefined,
             maintain_aspect_ratio: imageStudioAspectRatio,
+          },
+        };
+        break;
+      case 'image_watermark':
+        request = {
+          action: 'image_watermark',
+          params: {
+            input_paths: stagedFiles,
+            output_dir: outputDir,
+            watermark_type: imageWatermarkType,
+            text: imageWatermarkType === 'text' ? imageWatermarkText : undefined,
+            font_size: imageWatermarkType === 'text' ? imageWatermarkFontSize : undefined,
+            color: imageWatermarkType === 'text' ? imageWatermarkColor : undefined,
+            watermark_image_path: imageWatermarkType === 'image' ? imageWatermarkPath : undefined,
+            opacity: imageWatermarkOpacity,
+            position: imageWatermarkPosition,
+            margin: imageWatermarkMargin,
           },
         };
         break;
@@ -248,8 +422,8 @@ export const App: React.FC = () => {
               </button>
 
               <div className="text-right">
-                <h2 className="text-lg font-bold text-textPrimary">{selectedTool.name}</h2>
-                <p className="text-xs text-textMuted">{selectedTool.tagline}</p>
+                <span className="text-[10px] font-mono uppercase tracking-wider text-textMuted block">Current Task</span>
+                <span className="text-xs font-bold text-textPrimary">{selectedTool.name}</span>
               </div>
             </div>
 
@@ -263,8 +437,8 @@ export const App: React.FC = () => {
             />
           </div>
         ) : (
-          <div className="max-w-4xl mx-auto px-6 pt-6 pb-28 space-y-6">
-            {/* Top Bar Navigation */}
+          <div className="max-w-4xl mx-auto px-6 py-4 space-y-4">
+            {/* Nav Back & Tool Meta Bar */}
             <div className="flex items-center justify-between">
               <button
                 type="button"
@@ -276,29 +450,39 @@ export const App: React.FC = () => {
               </button>
 
               <div className="text-right">
-                <h2 className="text-lg font-bold text-textPrimary">{selectedTool.name}</h2>
-                <p className="text-xs text-textMuted">{selectedTool.tagline}</p>
+                <div className="flex items-center justify-end space-x-2">
+                  <h3 className="text-sm font-bold text-textPrimary">{selectedTool.name}</h3>
+                  {selectedTool.badge && (
+                    <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-primary/10 text-primary border border-primary/20">
+                      {selectedTool.badge}
+                    </span>
+                  )}
+                </div>
+                <p className="text-[11px] text-textMuted">{selectedTool.tagline}</p>
               </div>
             </div>
 
-            {/* Error Message */}
+            {/* Error Banner */}
             {errorMessage && (
-              <div className="p-4 rounded-xl bg-danger/10 border border-danger/30 text-danger text-xs flex items-center space-x-2.5">
-                <AlertCircle className="w-4 h-4 text-danger shrink-0" />
-                <span>{errorMessage}</span>
+              <div className="p-3.5 rounded-xl bg-danger/10 border border-danger/30 text-xs text-danger flex items-start space-x-2.5 animate-fadeIn">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <span className="font-semibold block">Execution Error</span>
+                  <span className="text-[11px] leading-relaxed block mt-0.5">{errorMessage}</span>
+                </div>
               </div>
             )}
 
-            {/* File Staging DropZone */}
+            {/* File Staging Box */}
             <DropZone
-              files={stagedFiles}
-              onFilesChange={setStagedFiles}
               acceptedExtensions={selectedTool.acceptedExtensions}
               multiFile={selectedTool.multiFile}
               minFiles={selectedTool.minFiles}
+              files={stagedFiles}
+              onFilesChange={setStagedFiles}
             />
 
-            {/* Tool-specific parameter panels (shown when files are staged) */}
+            {/* Tool-specific Settings Panels (Rendered when files are staged) */}
             {stagedFiles.length > 0 && (
               <>
                 {selectedTool.id === 'pdf_merge' && (
@@ -320,6 +504,88 @@ export const App: React.FC = () => {
                   <PdfOrganizePanel
                     filePath={stagedFiles[0]}
                     onStateChange={setOrganizeState}
+                  />
+                )}
+                {selectedTool.id === 'pdf_compress' && (
+                  <PdfCompressPanel
+                    level={compressLevel}
+                    onChangeLevel={setCompressLevel}
+                    outputFilename={compressFilename}
+                    onChangeOutputFilename={setCompressFilename}
+                  />
+                )}
+                {selectedTool.id === 'pdf_watermark' && (
+                  <PdfWatermarkPanel
+                    watermarkType={watermarkType}
+                    onChangeWatermarkType={setWatermarkType}
+                    text={watermarkText}
+                    onChangeText={setWatermarkText}
+                    fontSize={watermarkFontSize}
+                    onChangeFontSize={setWatermarkFontSize}
+                    color={watermarkColor}
+                    onChangeColor={setWatermarkColor}
+                    imagePath={watermarkImagePath}
+                    onChangeImagePath={setWatermarkImagePath}
+                    opacity={watermarkOpacity}
+                    onChangeOpacity={setWatermarkOpacity}
+                    rotation={watermarkRotation}
+                    onChangeRotation={setWatermarkRotation}
+                    position={watermarkPosition}
+                    onChangePosition={setWatermarkPosition}
+                    pages={watermarkPages}
+                    onChangePages={setWatermarkPages}
+                    outputFilename={watermarkFilename}
+                    onChangeOutputFilename={setWatermarkFilename}
+                  />
+                )}
+                {selectedTool.id === 'pdf_page_numbers' && (
+                  <PdfPageNumbersPanel
+                    formatTemplate={pageNumbersTemplate}
+                    onChangeFormatTemplate={setPageNumbersTemplate}
+                    position={pageNumbersPosition}
+                    onChangePosition={setPageNumbersPosition}
+                    fontSize={pageNumbersFontSize}
+                    onChangeFontSize={setPageNumbersFontSize}
+                    marginPt={pageNumbersMargin}
+                    onChangeMarginPt={setPageNumbersMargin}
+                    startPageNumber={pageNumbersStart}
+                    onChangeStartPageNumber={setPageNumbersStart}
+                    pages={pageNumbersPages}
+                    onChangePages={setPageNumbersPages}
+                    outputFilename={pageNumbersFilename}
+                    onChangeOutputFilename={setPageNumbersFilename}
+                  />
+                )}
+                {selectedTool.id === 'pdf_protect' && (
+                  <PdfProtectPanel
+                    userPassword={protectPassword}
+                    onChangeUserPassword={setProtectPassword}
+                    outputFilename={protectFilename}
+                    onChangeOutputFilename={setProtectFilename}
+                  />
+                )}
+                {selectedTool.id === 'pdf_unlock' && (
+                  <PdfUnlockPanel
+                    password={unlockPassword}
+                    onChangePassword={setUnlockPassword}
+                    outputFilename={unlockFilename}
+                    onChangeOutputFilename={setUnlockFilename}
+                  />
+                )}
+                {selectedTool.id === 'pdf_crop' && (
+                  <PdfCropPanel
+                    marginTop={cropMarginTop}
+                    onChangeMarginTop={setCropMarginTop}
+                    marginBottom={cropMarginBottom}
+                    onChangeMarginBottom={setCropMarginBottom}
+                    marginLeft={cropMarginLeft}
+                    onChangeMarginLeft={setCropMarginLeft}
+                    marginRight={cropMarginRight}
+                    onChangeMarginRight={setCropMarginRight}
+                    unit={cropUnit}
+                    onChangeUnit={setCropUnit}
+                    outputFilename={cropFilename}
+                    onChangeOutputFilename={setCropFilename}
                   />
                 )}
                 {selectedTool.id === 'images_to_pdf' && (
@@ -352,6 +618,26 @@ export const App: React.FC = () => {
                     onChangeScalePercentage={setImageStudioScale}
                     maintainAspectRatio={imageStudioAspectRatio}
                     onChangeMaintainAspectRatio={setImageStudioAspectRatio}
+                  />
+                )}
+                {selectedTool.id === 'image_watermark' && (
+                  <ImageWatermarkPanel
+                    watermarkType={imageWatermarkType}
+                    onChangeWatermarkType={setImageWatermarkType}
+                    text={imageWatermarkText}
+                    onChangeText={setImageWatermarkText}
+                    fontSize={imageWatermarkFontSize}
+                    onChangeFontSize={setImageWatermarkFontSize}
+                    color={imageWatermarkColor}
+                    onChangeColor={setImageWatermarkColor}
+                    watermarkImagePath={imageWatermarkPath}
+                    onChangeWatermarkImagePath={setImageWatermarkPath}
+                    opacity={imageWatermarkOpacity}
+                    onChangeOpacity={setImageWatermarkOpacity}
+                    position={imageWatermarkPosition}
+                    onChangePosition={setImageWatermarkPosition}
+                    margin={imageWatermarkMargin}
+                    onChangeMargin={setImageWatermarkMargin}
                   />
                 )}
 
