@@ -109,9 +109,20 @@ async function run() {
   }
 
   // ----------------------------------------------------
-  // 2. Mobile Expo Assets (iOS 24-bit RGB, Splash, Adaptive)
+  // 2. Desktop Web & Public Assets (logo.svg, favicon.svg, logo.png)
   // ----------------------------------------------------
-  console.log('\n3. Generating Expo Mobile Assets (iOS 24-bit RGB, Splash, Adaptive)...');
+  console.log('\n3. Generating Desktop Web & Public Brand Assets...');
+  const DESKTOP_PUBLIC_DIR = path.join(REPO_ROOT, 'apps/desktop/public');
+  fs.mkdirSync(DESKTOP_PUBLIC_DIR, { recursive: true });
+  fs.copyFileSync(path.join(BRAND_DIR, 'desktop-app-icon.svg'), path.join(DESKTOP_PUBLIC_DIR, 'logo.svg'));
+  fs.copyFileSync(path.join(BRAND_DIR, 'desktop-app-icon.svg'), path.join(DESKTOP_PUBLIC_DIR, 'favicon.svg'));
+  fs.copyFileSync(desktopIconPng, path.join(DESKTOP_PUBLIC_DIR, 'logo.png'));
+  console.log('  ✓ Updated apps/desktop/public/ (logo.svg, favicon.svg, logo.png)');
+
+  // ----------------------------------------------------
+  // 3. Mobile Expo Assets (iOS 24-bit RGB, Splash, Adaptive)
+  // ----------------------------------------------------
+  console.log('\n4. Generating Expo Mobile Assets (iOS 24-bit RGB, Splash, Adaptive)...');
   fs.mkdirSync(MOBILE_ASSETS_DIR, { recursive: true });
 
   // iOS App Store Icon (Strictly opaque 24-bit RGB, 0% alpha)
@@ -142,9 +153,9 @@ async function run() {
   fs.writeFileSync(path.join(MOBILE_ASSETS_DIR, 'notification-icon.png'), notifCanvas.toBuffer('image/png'));
 
   // ----------------------------------------------------
-  // 3. Android Native Mipmaps & Drawables
+  // 4. Android Native Mipmaps & Drawables
   // ----------------------------------------------------
-  console.log('4. Generating Android Native Mipmaps & Drawables...');
+  console.log('\n5. Generating Android Native Mipmaps & Drawables...');
   const densities = {
     'mipmap-mdpi': { legacy: 48, fg: 108 },
     'mipmap-hdpi': { legacy: 72, fg: 162 },

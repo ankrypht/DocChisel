@@ -8,7 +8,6 @@ import {
   LayoutGrid,
   Image as ImageIcon,
   Sparkles,
-  ArrowRight,
 } from 'lucide-react-native';
 
 interface ToolCardProps {
@@ -20,7 +19,7 @@ export function ToolCard({ tool }: ToolCardProps) {
   const theme = TOOL_THEMES[tool.id] || TOOL_THEMES.pdf_merge;
 
   const renderIcon = () => {
-    const size = 24;
+    const size = 22;
     const color = theme.hexColor;
 
     switch (tool.id) {
@@ -46,55 +45,56 @@ export function ToolCard({ tool }: ToolCardProps) {
       accessibilityRole="button"
       activeOpacity={0.7}
       onPress={() => router.push(`/tool/${tool.id}` as any)}
-      className="bg-surface border border-border rounded-2xl p-5 mb-4 shadow-sm"
+      style={{
+        borderColor: `${theme.hexColor}60`,
+        shadowColor: theme.hexColor,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 6,
+        elevation: 3,
+      }}
+      className="bg-surface border rounded-2xl p-4 mb-3.5"
     >
-      <View className="flex-row items-center justify-between mb-2.5">
+      <View className="flex-row items-center mb-2">
         {/* Themed Icon Container */}
         <View
           style={{
             backgroundColor: `${theme.hexColor}1A`,
             borderColor: `${theme.hexColor}40`,
           }}
-          className="w-12 h-12 rounded-xl items-center justify-center border"
+          className="w-11 h-11 rounded-xl items-center justify-center border mr-3"
         >
           {renderIcon()}
         </View>
 
-        {tool.badge && (
-          <View
-            style={{
-              backgroundColor: `${theme.hexColor}1A`,
-              borderColor: `${theme.hexColor}4D`,
-            }}
-            className="px-3 py-1 rounded-full border"
-          >
-            <Text
-              style={{ color: theme.hexColor }}
-              className="text-xs font-bold tracking-wide uppercase"
-            >
-              {tool.badge}
+        <View className="flex-1">
+          <View className="flex-row items-center justify-between">
+            <Text className="text-textPrimary font-bold text-base">
+              {tool.name}
             </Text>
+            {tool.badge && (
+              <View
+                style={{
+                  backgroundColor: `${theme.hexColor}1A`,
+                  borderColor: `${theme.hexColor}40`,
+                }}
+                className="px-2 py-0.5 rounded-full border"
+              >
+                <Text
+                  style={{ color: theme.hexColor }}
+                  className="text-[10px] font-bold tracking-wide uppercase"
+                >
+                  {tool.badge}
+                </Text>
+              </View>
+            )}
           </View>
-        )}
+        </View>
       </View>
 
-      <Text className="text-textPrimary font-bold text-lg mt-1">
-        {tool.name}
-      </Text>
-      <Text className="text-textSecondary text-sm mt-0.5 font-semibold">
-        {tool.tagline}
-      </Text>
-      <Text className="text-textMuted text-sm mt-2 leading-5" numberOfLines={2}>
+      <Text className="text-textSecondary text-xs leading-5">
         {tool.description}
       </Text>
-
-      {/* Select Tool Footer Action */}
-      <View className="flex-row items-center justify-between mt-4 pt-3 border-t border-border/50">
-        <Text className="text-sm font-semibold text-textSecondary">
-          Select Tool
-        </Text>
-        <ArrowRight size={16} color={theme.hexColor} />
-      </View>
     </TouchableOpacity>
   );
 }

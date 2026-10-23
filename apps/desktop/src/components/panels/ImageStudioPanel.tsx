@@ -40,7 +40,7 @@ export const ImageStudioPanel: React.FC<ImageStudioPanelProps> = ({
     <div className="bg-surface rounded-2xl border border-border p-5 space-y-5">
       <div className="flex items-center justify-between">
         <h4 className="text-xs font-bold uppercase tracking-wider text-textMuted">
-          Hardware-Accelerated Studio Controls
+          Image Settings
         </h4>
         {files.length > 0 && (
           <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-rose/10 text-rose border border-rose/25">
@@ -52,7 +52,7 @@ export const ImageStudioPanel: React.FC<ImageStudioPanelProps> = ({
       {/* Pipeline Preview Tag */}
       <div className="p-3 rounded-xl bg-surfaceElevated border border-border flex flex-wrap items-center justify-between gap-2 text-xs">
         <div className="flex items-center space-x-2">
-          <span className="text-textSecondary">Output Pipeline:</span>
+          <span className="text-textSecondary">Output:</span>
           <span className="font-bold text-textPrimary uppercase font-mono bg-surface px-2 py-0.5 rounded border border-border">
             {format}
           </span>
@@ -64,10 +64,10 @@ export const ImageStudioPanel: React.FC<ImageStudioPanelProps> = ({
         </div>
         <div className="text-[11px] text-textMuted font-mono">
           {resizeMode === 'none'
-            ? 'Original Dimensions (SIMD Pass)'
+            ? 'Size: Original'
             : resizeMode === 'percentage'
-            ? `Scale: ${scalePercentage}% (SIMD Lanczos3)`
-            : `Max: ${targetWidth}×${targetHeight}px (SIMD Lanczos3)`}
+            ? `Size: ${scalePercentage}% Scale`
+            : `Size: Max ${targetWidth}×${targetHeight}px`}
         </div>
       </div>
 
@@ -136,27 +136,37 @@ export const ImageStudioPanel: React.FC<ImageStudioPanelProps> = ({
         </div>
       )}
 
-      {/* Resize Controls (SIMD Lanczos3) */}
+      {/* Resize Controls */}
       <div>
         <label className="block text-xs font-semibold text-textSecondary mb-1.5">
-          SIMD Lanczos3 Resizing
+          Resize Image
         </label>
         <div className="grid grid-cols-3 gap-2 mb-3">
-          {(['none', 'percentage', 'dimensions'] as ImageResizeMode[]).map((mode) => (
+          {[
+            { id: 'none', label: 'No Resize' },
+            { id: 'percentage', label: 'Scale %' },
+            { id: 'dimensions', label: 'Dimensions' },
+          ].map((item) => (
             <button
-              key={mode}
+              key={item.id}
               type="button"
-              onClick={() => onChangeResizeMode(mode)}
-              className={`py-1.5 px-3 rounded-xl text-xs font-semibold capitalize transition-all cursor-pointer ${
-                resizeMode === mode
+              onClick={() => onChangeResizeMode(item.id as ImageResizeMode)}
+              className={`py-2 px-3 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                resizeMode === item.id
                   ? 'bg-primary text-white shadow-xs'
                   : 'bg-surfaceElevated text-textSecondary hover:text-textPrimary border border-border'
               }`}
             >
-              {mode}
+              {item.label}
             </button>
           ))}
         </div>
+
+        {resizeMode === 'none' && (
+          <div className="p-3 bg-surfaceElevated rounded-xl border border-border text-xs text-textMuted">
+            Preserves the original pixel dimensions and resolution of your images.
+          </div>
+        )}
 
         {resizeMode === 'percentage' && (
           <div className="p-3 bg-surfaceElevated rounded-xl border border-border space-y-2">
@@ -173,6 +183,22 @@ export const ImageStudioPanel: React.FC<ImageStudioPanelProps> = ({
               onChange={(e) => onChangeScalePercentage(Number(e.target.value))}
               className="w-full accent-primary bg-surface h-1.5 rounded-lg appearance-none cursor-pointer"
             />
+            <div className="flex space-x-1.5 pt-1">
+              {[25, 50, 75, 100, 150].map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => onChangeScalePercentage(s)}
+                  className={`px-2 py-0.5 rounded text-[10px] font-mono transition-colors cursor-pointer ${
+                    scalePercentage === s
+                      ? 'bg-primary/20 text-primary border border-primary/40 font-bold'
+                      : 'bg-surface text-textSecondary hover:text-textPrimary border border-border'
+                  }`}
+                >
+                  {s}%
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
@@ -206,7 +232,7 @@ export const ImageStudioPanel: React.FC<ImageStudioPanelProps> = ({
                 className="rounded accent-primary"
               />
               <span className="text-xs text-textSecondary font-medium">
-                Maintain proportional aspect ratio
+                Keep aspect ratio (preserves image proportions without stretching)
               </span>
             </label>
           </div>

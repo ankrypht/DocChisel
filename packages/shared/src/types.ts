@@ -1,4 +1,4 @@
-export type ToolCategory = 'pdf' | 'image';
+export type ToolCategory = 'organize' | 'convert' | 'image' | 'pdf';
 
 export type ToolId =
   | 'pdf_merge'

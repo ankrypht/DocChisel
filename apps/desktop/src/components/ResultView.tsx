@@ -30,9 +30,9 @@ export const ResultView: React.FC<ResultViewProps> = ({ output, outputDir, onRes
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6 py-8">
+    <div className="max-w-2xl mx-auto space-y-5">
       {/* Success Card */}
-      <div className="bg-surface rounded-3xl border border-border p-8 text-center space-y-6 shadow-2xl relative overflow-hidden">
+      <div className="bg-surface rounded-3xl border border-border p-6 sm:p-7 text-center space-y-5 shadow-2xl relative overflow-hidden">
         {/* Smooth Ambient Glow Backdrop without blur banding */}
         <div
           className="absolute -top-20 left-1/2 -translate-x-1/2 w-96 h-80 pointer-events-none rounded-full"

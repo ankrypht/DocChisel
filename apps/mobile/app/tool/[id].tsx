@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -91,9 +91,15 @@ export default function ToolWorkspaceScreen() {
   const [imageStudioAspectRatio, setImageStudioAspectRatio] = useState(true);
 
   // Execution State
+  const scrollRef = useRef<React.ElementRef<typeof ScrollView>>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [jobResult, setJobResult] = useState<JobOutput | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Automatically reset scroll to top when job finishes or when resetting
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
+  }, [jobResult]);
 
   if (!tool) {
     return (
@@ -298,6 +304,7 @@ export default function ToolWorkspaceScreen() {
   return (
     <SafeAreaView className="flex-1 bg-canvas" edges={['top', 'left', 'right']}>
       <ScrollView
+        ref={scrollRef}
         className="flex-1 px-4 pt-1"
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -505,7 +512,7 @@ export default function ToolWorkspaceScreen() {
                     <>
                       <ActivityIndicator size="small" color="#FFFFFF" />
                       <Text className="text-white font-semibold text-sm ml-2">
-                        Processing Locally with SIMD & Rayon...
+                        Processing Locally...
                       </Text>
                     </>
                   ) : (

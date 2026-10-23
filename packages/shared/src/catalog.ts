@@ -13,13 +13,22 @@ export interface ToolMetadata {
   minFiles: number;
 }
 
+export const CATEGORY_FILTERS = [
+  { key: 'all', label: 'All Tools' },
+  { key: 'organize', label: 'Organize PDF' },
+  { key: 'convert', label: 'Convert' },
+  { key: 'image', label: 'Image Studio' },
+] as const;
+
+export type FilterCategory = (typeof CATEGORY_FILTERS)[number]['key'];
+
 export const TOOL_CATALOG: ToolMetadata[] = [
   {
     id: 'pdf_merge',
     name: 'Merge PDF',
     tagline: 'Combine multiple PDFs into one unified document',
     description: 'Merge PDFs in the exact order you want with high-speed local processing.',
-    category: 'pdf',
+    category: 'organize',
     iconName: 'Files',
     badge: 'Popular',
     acceptedExtensions: ['.pdf'],
@@ -31,7 +40,7 @@ export const TOOL_CATALOG: ToolMetadata[] = [
     name: 'Split PDF',
     tagline: 'Separate pages or extract custom page ranges',
     description: 'Burst a PDF into individual single-page documents or extract specific page intervals.',
-    category: 'pdf',
+    category: 'organize',
     iconName: 'Split',
     acceptedExtensions: ['.pdf'],
     multiFile: false,
@@ -42,7 +51,7 @@ export const TOOL_CATALOG: ToolMetadata[] = [
     name: 'Organize PDF',
     tagline: 'Rotate, reorder, or delete individual pages',
     description: 'Take full control of PDF page order, orientations (90°, 180°, 270°), and removals.',
-    category: 'pdf',
+    category: 'organize',
     iconName: 'LayoutGrid',
     acceptedExtensions: ['.pdf'],
     multiFile: false,
@@ -53,7 +62,7 @@ export const TOOL_CATALOG: ToolMetadata[] = [
     name: 'Images to PDF',
     tagline: 'Convert PNG, JPG, WebP images into a single PDF',
     description: 'Compile multiple images into a standard A4, Letter, or Fit-dimension PDF document.',
-    category: 'pdf',
+    category: 'convert',
     iconName: 'FileImage',
     badge: 'Fast',
     acceptedExtensions: ['.jpg', '.jpeg', '.png', '.webp'],
@@ -63,11 +72,11 @@ export const TOOL_CATALOG: ToolMetadata[] = [
   {
     id: 'image_studio',
     name: 'Image Studio',
-    tagline: 'Batch compress, resize via SIMD, & convert formats',
-    description: 'Hardware-accelerated image pipeline. Convert between JPEG, PNG, and WebP with fine quality and Lanczos3 resizing.',
+    tagline: 'Batch compress, resize, & convert formats',
+    description: 'Convert between JPEG, PNG, and WebP with high-speed compression and custom resizing.',
     category: 'image',
     iconName: 'Sparkles',
-    badge: 'SIMD Accelerated',
+    badge: 'Popular',
     acceptedExtensions: ['.jpg', '.jpeg', '.png', '.webp'],
     multiFile: true,
     minFiles: 1,

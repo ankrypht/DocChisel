@@ -22,11 +22,11 @@
 
 | Tool | Category | Description |
 | :--- | :--- | :--- |
-| **Merge PDF** | PDF | Combine multiple PDFs in any custom order with high-speed local processing. |
-| **Split PDF** | PDF | Burst documents into single pages or extract arbitrary page ranges. |
-| **Organize PDF** | PDF | Visual page organizer: rotate (90°, 180°, 270°), reorder, or delete individual pages. |
-| **Images to PDF** | PDF | Convert JPG, PNG, and WebP collections into standard A4, Letter, or Fit PDFs. |
-| **Image Studio** | Image | Batch compress, resize using SIMD (Lanczos3), and convert between PNG, JPEG, and WebP. |
+| **Merge PDF** | Organize PDF | Combine multiple PDFs in any custom order with high-speed local processing. |
+| **Split PDF** | Organize PDF | Burst documents into single pages or extract arbitrary page ranges. |
+| **Organize PDF** | Organize PDF | Visual page organizer: rotate (90°, 180°, 270°), reorder, or delete individual pages. |
+| **Images to PDF** | Convert | Convert JPG, PNG, and WebP collections into standard A4, Letter, or Fit PDFs. |
+| **Image Studio** | Image Studio | Batch compress, resize, and convert between PNG, JPEG, and WebP. |
 
 ---
 

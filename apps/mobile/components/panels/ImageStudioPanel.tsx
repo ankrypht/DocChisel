@@ -50,7 +50,7 @@ export const ImageStudioPanel: React.FC<ImageStudioPanelProps> = ({
             numberOfLines={1}
             ellipsizeMode="tail"
           >
-            Hardware Studio Controls
+            Image Settings
           </Text>
         </View>
         {files.length > 0 && (
@@ -65,7 +65,7 @@ export const ImageStudioPanel: React.FC<ImageStudioPanelProps> = ({
       {/* Pipeline Preview Tag */}
       <View className="p-3 rounded-xl bg-surfaceElevated border border-border mb-3.5 flex-row items-center justify-between">
         <View className="flex-row items-center flex-shrink-0">
-          <Text className="text-textSecondary text-xs mr-2">Pipeline:</Text>
+          <Text className="text-textSecondary text-xs mr-2">Output:</Text>
           <View className="bg-surface px-2 py-0.5 rounded border border-border mr-2">
             <Text className="text-textPrimary font-mono font-bold text-xs uppercase">
               {format}
@@ -79,10 +79,10 @@ export const ImageStudioPanel: React.FC<ImageStudioPanelProps> = ({
         </View>
         <Text className="text-[10px] text-textMuted font-mono flex-1 text-right ml-2" numberOfLines={1}>
           {resizeMode === 'none'
-            ? 'Original Size (SIMD)'
+            ? 'Size: Original'
             : resizeMode === 'percentage'
-            ? `Scale: ${scalePercentage}% (Lanczos3)`
-            : `Max: ${targetWidth}×${targetHeight}px`}
+            ? `Size: ${scalePercentage}% Scale`
+            : `Size: Max ${targetWidth}×${targetHeight}px`}
         </Text>
       </View>
 
@@ -198,37 +198,49 @@ export const ImageStudioPanel: React.FC<ImageStudioPanelProps> = ({
         </View>
       )}
 
-      {/* Resize Controls (SIMD Lanczos3) */}
+      {/* Resize Controls */}
       <View>
         <Text className="text-sm font-semibold text-textSecondary mb-2">
-          SIMD Lanczos3 Resizing
+          Resize Image
         </Text>
         <View className="flex-row mb-3.5">
-          {(['none', 'percentage', 'dimensions'] as ImageResizeMode[]).map((mode, idx, arr) => (
+          {[
+            { id: 'none', label: 'No Resize' },
+            { id: 'percentage', label: 'Scale %' },
+            { id: 'dimensions', label: 'Dimensions' },
+          ].map((modeItem, idx, arr) => (
             <TouchableOpacity
-              key={mode}
-              testID={`resize-mode-${mode}`}
-              accessibilityLabel={`Resize mode ${mode}`}
+              key={modeItem.id}
+              testID={`resize-mode-${modeItem.id}`}
+              accessibilityLabel={`Resize mode ${modeItem.label}`}
               accessibilityRole="button"
-              onPress={() => onChangeResizeMode(mode)}
+              onPress={() => onChangeResizeMode(modeItem.id as ImageResizeMode)}
               className={`flex-1 py-2.5 px-3 rounded-xl border items-center justify-center ${
                 idx < arr.length - 1 ? 'mr-2' : ''
               } ${
-                resizeMode === mode
+                resizeMode === modeItem.id
                   ? 'bg-primary border-primary'
                   : 'bg-surfaceElevated border-border'
               }`}
             >
               <Text
-                className={`text-sm font-bold capitalize ${
-                  resizeMode === mode ? 'text-white' : 'text-textSecondary'
+                className={`text-sm font-bold ${
+                  resizeMode === modeItem.id ? 'text-white' : 'text-textSecondary'
                 }`}
               >
-                {mode}
+                {modeItem.label}
               </Text>
             </TouchableOpacity>
           ))}
         </View>
+
+        {resizeMode === 'none' && (
+          <View className="p-3.5 bg-surfaceElevated rounded-2xl border border-border">
+            <Text className="text-xs text-textMuted leading-5">
+              Preserves the original pixel dimensions and resolution of your images.
+            </Text>
+          </View>
+        )}
 
         {resizeMode === 'percentage' && (
           <View className="p-4 bg-surfaceElevated rounded-2xl border border-border">
@@ -318,7 +330,7 @@ export const ImageStudioPanel: React.FC<ImageStudioPanelProps> = ({
                 {maintainAspectRatio && <Check size={14} color="#FFFFFF" />}
               </View>
               <Text className="text-sm text-textSecondary font-medium">
-                Maintain proportional aspect ratio
+                Keep aspect ratio (preserves image proportions without stretching)
               </Text>
             </TouchableOpacity>
           </View>

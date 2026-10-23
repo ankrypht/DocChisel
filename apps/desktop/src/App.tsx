@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   ToolId,
   getToolMetadata,
@@ -10,6 +10,7 @@ import {
   ImageResizeMode,
   PageRotation,
   PdfSplitMode,
+  FilterCategory,
 } from '@docchisel/shared';
 import { Header } from './components/Header';
 import { ToolGrid } from './components/ToolGrid';
@@ -41,7 +42,8 @@ function incrementFilename(name: string): string {
 }
 
 export const App: React.FC = () => {
-  const [category, setCategory] = useState<'all' | 'pdf' | 'image'>('all');
+  const mainRef = useRef<HTMLElement>(null);
+  const [category, setCategory] = useState<FilterCategory>('all');
   const [selectedToolId, setSelectedToolId] = useState<ToolId | null>(null);
 
   // Staging state
@@ -94,6 +96,13 @@ export const App: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [jobResult, setJobResult] = useState<JobOutput | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Automatically reset main scroll position to top when switching tools, running jobs, or resetting
+  useEffect(() => {
+    if (mainRef.current) {
+      mainRef.current.scrollTop = 0;
+    }
+  }, [selectedToolId, jobResult]);
 
   const selectedTool = selectedToolId ? getToolMetadata(selectedToolId) : null;
 
@@ -215,24 +224,44 @@ export const App: React.FC = () => {
   return (
     <div className="h-full w-full bg-canvas text-gray-100 flex flex-col overflow-hidden">
       <Header
-        currentCategory={category}
-        onSelectCategory={setCategory}
         toolSelected={!!selectedToolId}
         onHomeClick={handleBack}
       />
 
-      <main className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+      <main ref={mainRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
         {!selectedTool ? (
-          <ToolGrid currentCategory={category} onSelectTool={handleSelectTool} />
-        ) : jobResult ? (
-          <ResultView
-            output={jobResult}
-            outputDir={outputDir}
-            onReset={() => {
-              setJobResult(null);
-              setStagedFiles([]);
-            }}
+          <ToolGrid
+            currentCategory={category}
+            onSelectCategory={setCategory}
+            onSelectTool={handleSelectTool}
           />
+        ) : jobResult ? (
+          <div className="max-w-4xl mx-auto px-6 py-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <button
+                type="button"
+                onClick={handleBack}
+                className="flex items-center space-x-2 text-xs font-semibold text-textSecondary hover:text-textPrimary px-3 py-1.5 rounded-lg bg-surface border border-border hover:bg-surfaceElevated transition-all cursor-pointer"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>All Tools</span>
+              </button>
+
+              <div className="text-right">
+                <h2 className="text-lg font-bold text-textPrimary">{selectedTool.name}</h2>
+                <p className="text-xs text-textMuted">{selectedTool.tagline}</p>
+              </div>
+            </div>
+
+            <ResultView
+              output={jobResult}
+              outputDir={outputDir}
+              onReset={() => {
+                setJobResult(null);
+                setStagedFiles([]);
+              }}
+            />
+          </div>
         ) : (
           <div className="max-w-4xl mx-auto px-6 pt-6 pb-28 space-y-6">
             {/* Top Bar Navigation */}
@@ -352,7 +381,7 @@ export const App: React.FC = () => {
                   {isProcessing ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin text-white" />
-                      <span>Processing Locally with SIMD & Rayon...</span>
+                      <span>Processing Locally...</span>
                     </>
                   ) : (
                     <>
