@@ -181,7 +181,8 @@ export default function ToolWorkspaceScreen() {
 
   const isImageTool =
     tool.id === 'images_to_pdf' ||
-    tool.category === 'image' ||
+    tool.category === 'img_optimize' ||
+    tool.category === 'img_security' ||
     !tool.acceptedExtensions.includes('.pdf');
 
   const addUris = (uris: string[]) => {

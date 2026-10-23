@@ -1,11 +1,11 @@
 import React from 'react';
 import {
   TOOL_CATALOG,
-  ToolMetadata,
-  ToolId,
-  FilterCategory,
   CATEGORY_FILTERS,
+  CategoryFilter,
+  ToolMetadata,
 } from '@docchisel/shared';
+import type { ToolId, FilterCategory } from '@docchisel/shared';
 import {
   Files,
   Split,
@@ -109,15 +109,15 @@ const TOOL_THEMES: Record<ToolId, ToolTheme> = {
     hoverTitle: 'group-hover:text-violet',
   },
   pdf_page_numbers: {
-    iconColor: 'text-rose',
-    bgSubtle: 'bg-rose/15',
-    borderSubtle: 'border-rose/30',
-    badgeBg: 'bg-rose/15',
-    badgeText: 'text-rose',
-    badgeBorder: 'border-rose/35',
-    hoverBorder: 'hover:border-rose/80',
-    hoverGlow: 'hover:shadow-[0_0_28px_-4px_rgba(244,63,94,0.4)]',
-    hoverTitle: 'group-hover:text-rose',
+    iconColor: 'text-blue',
+    bgSubtle: 'bg-blue/15',
+    borderSubtle: 'border-blue/30',
+    badgeBg: 'bg-blue/15',
+    badgeText: 'text-blue',
+    badgeBorder: 'border-blue/35',
+    hoverBorder: 'hover:border-blue/80',
+    hoverGlow: 'hover:shadow-[0_0_28px_-4px_rgba(59,130,246,0.4)]',
+    hoverTitle: 'group-hover:text-blue',
   },
   pdf_protect: {
     iconColor: 'text-amber',
@@ -187,49 +187,120 @@ const TOOL_THEMES: Record<ToolId, ToolTheme> = {
   },
 };
 
+// ─── helpers ────────────────────────────────────────────────────────────────
+
+/** Returns true if the tool belongs to the selected filter */
+function toolMatchesFilter(tool: ToolMetadata, filter: string): boolean {
+  if (filter === 'all') return true;
+  return tool.category === filter;
+}
+
+/** Render a single group of filter chips with a preceding label */
+const FilterGroup: React.FC<{
+  label: string;
+  filters: CategoryFilter[];
+  currentCategory: string;
+  onSelect: (key: string) => void;
+}> = ({ label, filters, currentCategory, onSelect }) => (
+  <div className="flex items-center gap-2 flex-wrap">
+    <span className="text-[10px] font-semibold tracking-widest uppercase text-textSecondary/50 select-none">
+      {label}
+    </span>
+    {filters.map((cat) => {
+      const active = currentCategory === cat.key;
+      return (
+        <button
+          key={cat.key}
+          onClick={() => onSelect(cat.key)}
+          className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer border ${
+            active
+              ? 'bg-primary text-white border-primary shadow-md shadow-primary/25'
+              : 'bg-surface text-textSecondary border-border hover:text-textPrimary hover:border-borderHover hover:bg-surfaceElevated'
+          }`}
+        >
+          {cat.label}
+        </button>
+      );
+    })}
+  </div>
+);
+
+// ─── main component ──────────────────────────────────────────────────────────
+
 export const ToolGrid: React.FC<ToolGridProps> = ({
   currentCategory,
   onSelectCategory,
   onSelectTool,
 }) => {
-  const filteredTools = TOOL_CATALOG.filter((tool) => {
-    if (currentCategory === 'all') return true;
-    return tool.category === currentCategory;
-  });
+  const filteredTools = TOOL_CATALOG.filter((tool) =>
+    toolMatchesFilter(tool, currentCategory),
+  );
+
+  const allFilter   = CATEGORY_FILTERS.filter((c) => c.group === 'all');
+  const pdfFilters  = CATEGORY_FILTERS.filter((c) => c.group === 'pdf');
+  const imgFilters  = CATEGORY_FILTERS.filter((c) => c.group === 'image');
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-10">
       {/* Hero Intro */}
       <div className="mb-6 text-center">
         <h2 className="text-3xl sm:text-4xl font-extrabold text-textPrimary tracking-tight">
-          Everything you need for PDFs & Images
+          Everything you need for PDFs &amp; Images
         </h2>
         <p className="mt-2.5 text-sm sm:text-base text-textSecondary max-w-xl mx-auto leading-relaxed">
           Ultra-fast operations performed entirely on your device with zero cloud uploads.
         </p>
       </div>
 
-      {/* Category Filter Chips placed below hero text like iLovePDF */}
-      <div className="flex items-center justify-center flex-wrap gap-2 mb-10">
-        {CATEGORY_FILTERS.map((cat) => {
-          const active = currentCategory === cat.key;
-          return (
-            <button
-              key={cat.key}
-              onClick={() => onSelectCategory(cat.key)}
-              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer border ${
-                active
-                  ? 'bg-primary text-white border-primary shadow-md shadow-primary/25'
-                  : 'bg-surface text-textSecondary border-border hover:text-textPrimary hover:border-borderHover hover:bg-surfaceElevated'
-              }`}
-            >
-              {cat.label}
-            </button>
-          );
-        })}
+      {/* ── Grouped filter chips ───────────────────────────────────────── */}
+      <div className="flex flex-col items-center gap-3 mb-10">
+        {/* "All Tools" chip sits on its own row */}
+        <div className="flex items-center gap-2">
+          {allFilter.map((cat) => {
+            const active = currentCategory === cat.key;
+            return (
+              <button
+                key={cat.key}
+                onClick={() => onSelectCategory(cat.key as FilterCategory)}
+                className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer border ${
+                  active
+                    ? 'bg-primary text-white border-primary shadow-md shadow-primary/25'
+                    : 'bg-surface text-textSecondary border-border hover:text-textPrimary hover:border-borderHover hover:bg-surfaceElevated'
+                }`}
+              >
+                {cat.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Divider */}
+        <div className="flex items-center gap-4 w-full max-w-4xl">
+          <div className="flex-1 h-px bg-border/60" />
+          <span className="text-[10px] font-semibold tracking-widest uppercase text-textSecondary/40 select-none">
+            Filter by category
+          </span>
+          <div className="flex-1 h-px bg-border/60" />
+        </div>
+
+        {/* PDF group */}
+        <FilterGroup
+          label="PDF"
+          filters={pdfFilters}
+          currentCategory={currentCategory}
+          onSelect={(k) => onSelectCategory(k as FilterCategory)}
+        />
+
+        {/* Image group */}
+        <FilterGroup
+          label="Image"
+          filters={imgFilters}
+          currentCategory={currentCategory}
+          onSelect={(k) => onSelectCategory(k as FilterCategory)}
+        />
       </div>
 
-      {/* Responsive Grid for 15-20 tools */}
+      {/* Responsive Tool Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
         {filteredTools.map((tool: ToolMetadata) => {
           const IconComponent = ICON_MAP[tool.iconName] || Files;
@@ -277,14 +348,8 @@ export const ToolGrid: React.FC<ToolGridProps> = ({
           );
         })}
       </div>
-
-      {filteredTools.length === 0 && (
-        <div className="py-12 text-center bg-surface rounded-2xl border border-border">
-          <p className="text-textSecondary text-sm font-medium">
-            No tools in this category
-          </p>
-        </div>
-      )}
     </div>
   );
 };
+
+

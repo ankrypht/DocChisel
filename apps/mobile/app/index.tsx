@@ -140,14 +140,6 @@ export default function HomeScreen() {
               </View>
             ))}
           </View>
-
-          {filteredTools.length === 0 && (
-            <View className="py-12 items-center justify-center bg-surface rounded-2xl border border-border">
-              <Text className="text-textSecondary text-sm font-medium">
-                No tools in this category
-              </Text>
-            </View>
-          )}
         </View>
       </ScrollView>
     </View>

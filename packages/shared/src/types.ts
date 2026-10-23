@@ -1,6 +1,13 @@
 import { z } from 'zod';
 
-export type ToolCategory = 'organize' | 'convert' | 'image' | 'pdf';
+export type ToolCategory =
+  | 'pdf_organize'
+  | 'pdf_optimize'
+  | 'pdf_convert_to'
+  | 'pdf_edit'
+  | 'pdf_security'
+  | 'img_optimize'
+  | 'img_security';
 
 export const ToolIdSchema = z.enum([
   'pdf_merge',
